@@ -15,6 +15,7 @@ EditorBuildSettings:
     path: Assets/Scenes/Pause.unity
     guid: 472b67258c17e9d4ea1872c2809d7505
   - enabled: 1
-    path: Assets/Scenes/MobControllerTestScene.unity
-    guid: 2a5fb8198f9528a49a34d5ec9b52ed7a
+    path: Assets/Scenes/GameplayScene.unity
+    guid: 73d418034ab0a4d45995a6ac7403dcb1
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0

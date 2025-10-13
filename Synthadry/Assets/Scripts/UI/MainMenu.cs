@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 
 public class MainMenu : MonoBehaviour
 {
+    [SerializeField] private string GamePlaySceneName;
     public void Start()
     {
         Cursor.lockState = CursorLockMode.None;
@@ -13,7 +14,7 @@ public class MainMenu : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-        ScenesManager.Instance.ChangeScene("MobControllerTestScene");
+        ScenesManager.Instance.ChangeScene(GamePlaySceneName);
     }
 
     public void Exit()

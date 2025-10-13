@@ -233,6 +233,7 @@ GameObject:
   - component: {fileID: 8596433750164024238}
   - component: {fileID: 2295442712664474347}
   - component: {fileID: 238613217260602997}
+  - component: {fileID: 2720610507158924222}
   m_Layer: 0
   m_Name: Door
   m_TagString: Untagged
@@ -273,6 +274,7 @@ MonoBehaviour:
   initialOpenState: 0
   OpenedMaterial: {fileID: 2100000, guid: 85491daae07243f4c87a18252075e269, type: 2}
   ClosedMaterial: {fileID: 2100000, guid: 64cba941ca4204e4289742aee8c5b935, type: 2}
+  log: 0
 --- !u!95 &238613217260602997
 Animator:
   serializedVersion: 7
@@ -295,3 +297,30 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!54 &2720610507158924222
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8720627383585384913}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0

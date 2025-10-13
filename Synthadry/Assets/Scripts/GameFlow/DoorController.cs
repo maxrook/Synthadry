@@ -10,13 +10,18 @@ public class DoorController : MonoBehaviour
      private bool isOpen = false;
     [SerializeField] private Material OpenedMaterial;
     [SerializeField] private Material ClosedMaterial;
+    [SerializeField] private bool log = false;
+    [SerializeField] Rigidbody _rigidbody;
+
     public bool IsOpen { get { return isOpen; } }
     private void Awake()
     {
         _animator = GetComponent<Animator>();
+        if (initialOpenState)
+            StartOpening();
     }
-    [ContextMenu("OpenDoor")]
-    public void StartOpening()
+    [ContextMenu("StartOpening")]
+    public void StartOpening()  
     {
         _animator.SetBool("isOpen", true);
     }
@@ -33,11 +38,12 @@ public class DoorController : MonoBehaviour
     {
         isOpen= true;
     }
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider collider)
     {
+        if(log) Debug.Log("OnTriggerEnter");
         if (!isOpen)
             return;
-        if (collision.gameObject.GetComponent<PlayerMovement>())
+        if (collider.gameObject.GetComponent<PlayerMovement>())
         {
             TransitNextScene();
         }
