@@ -12,19 +12,46 @@ public class MobController : MonoBehaviour, IPauseHandler
         Attack,
         Dead
     }
+    [Header("Текущее состояние моба")]
     public MobState state;
+
+    [Header("Включить отладку (Debug.Log)")]
     [SerializeField] private bool log = false;
+
+    [Header("Путь патрулирования (точки)")]
     public Vector3[] waypoints = new Vector3[2];
+
+    [Header("Скорость патруля")]
     public int patrolSpeed = 5;
+
+    [Header("Скорость бега за игроком")]
     public int runSpeed = 8;
+
+    [Header("Радиус обзора")]
     public float viewRadius = 10f;
+
+    [Header("Радиус атаки")]
     public float attackRadius = 2f;
+
+    [Header("Урон моба за одну атаку")]
     public float damage = 10f;
+
+    [Header("Здоровье моба")]
     public float health = 100f;
+
+    [Header("Интервал между атаками (сек)")]
     public float attackInterval = 1f;
+
+    [Header("Длительность остановки при патруле (сек)")]
     public float stopDuration = 3f;
+
+    [Header("Время до остановки при патруле (сек)")]
     public float timeUntilStop = 15f;
+
+    [Header("Время до исчезновения после смерти (сек)")]
     public float timeUntilDisappearance = 10f;
+
+    [Header("Угол обзора (в градусах)")]
     public float viewAngle = 80f;
 
     private float playerHealth;
@@ -79,7 +106,7 @@ public class MobController : MonoBehaviour, IPauseHandler
     private void OnPauseReady()
     {
         PauseManager.Instance.Register(this);
-        PauseManager.OnPauseManagerReady -= OnPauseReady; // ������������
+        PauseManager.OnPauseManagerReady -= OnPauseReady; // ������������
     }
 
     void OnDestroy()
@@ -298,8 +325,8 @@ public class MobController : MonoBehaviour, IPauseHandler
 
     public void SetPaused(bool isPaused)
     {
-        Enemy.isStopped = isPaused; // ��������� SetDirection
-        enabled = !isPaused; // ��������� Update, ���� ����� = true, �� enabled ������ ���� ����� = false
+        Enemy.isStopped = isPaused; // ��������� SetDirection
+        enabled = !isPaused; // ��������� Update, ���� ����� = true, �� enabled ������ ���� ����� = false
         if (isPaused)
             animator.speed = 0f;
         else

@@ -12,59 +12,93 @@ public class BossController : MonoBehaviour
     [System.Serializable]
     public class SlamSettings
     {
+        [Header("Префаб волны")]
         public GameObject wavePrefab;
+        [Header("Количество ударов подряд")]
         public int seriesCount = 4;
+        [Header("Интервал между волнами (сек)")]
         public float interval = 0.75f;
+        [Header("Урон от волны")]
         public float damage = 20f;
+        [Header("Скорость обычной волны")]
         public float normalWaveSpeed = 9f;
+        [Header("Макс. радиус обычной волны")]
         public float normalWaveMaxRadius = 15f;
+        [Header("Скорость широкой волны")]
         public float wideWaveSpeed = 10.5f;
+        [Header("Макс. радиус широкой волны")]
         public float wideWaveMaxRadius = 19f;
     }
 
     [System.Serializable]
     public class RavenSettings
     {
+        [Header("Префаб воронов")]
         public GameObject projectilePrefab;
+        [Header("Количество выстрелов в серии")]
         public int burst = 12;
+        [Header("Интервал между выстрелами (сек)")]
         public float rate = 0.09f;
+        [Header("Скорость полёта снаряда")]
         public float speed = 16f;
+        [Header("Время жизни снаряда (сек)")]
         public float life = 2.5f;
+        [Header("Урон от снаряда")]
         public float damage = 10f;
+        [Header("Разброс угла выстрелов")]
         public float spreadAngle = 8f;
     }
 
     [System.Serializable]
     public class SlashSettings
     {
+        [Header("Префаб зоны удара")]
         public GameObject hitboxPrefab;
-        public int count = 5;
+        [Header("Количество ударов")]
+        public int count = 1;
+        [Header("Подготовка к удару (сек)")]
         public float windup = 0.4f;
+        [Header("Активное окно удара (сек)")]
         public float active = 0.25f;
+        [Header("Задержка после удара (сек)")]
         public float recovery = 0.3f;
+        [Header("Урон от удара")]
         public float damage = 25f;
+        [Header("Дуга атаки (градусы)")]
         public float arcDegrees = 100f;
+        [Header("Радиус удара")]
         public float radius = 4.5f;
+        [Header("Макс. время ожидание игрока пока он не войдёт в радиус атаки (сек)")]
         public float waitMax = 3.0f;
     }
 
     [System.Serializable]
     public class ChargeSettings
     {
+        [Header("Подготовка перед рывком (сек)")]
         public float windup = 0.5f;
+        [Header("Скорость рывка")]
         public float speed = 18f;
+        [Header("Длительность рывка (сек)")]
         public float duration = 0.7f;
+        [Header("Перезарядка рывка (сек)")]
         public float cooldown = 2.0f;
+        [Header("Урон от рывка")]
         public float damage = 30f;
     }
 
     [System.Serializable]
     public class TotemSettings
     {
+        [Header("Префаб тотема")]
         public GameObject prefab;
+        [Header("Регенерация HP/сек при тотемах")]
         public float regenPerSec = 8f;
+        [Header("Длительность фазы тотемов (сек)")]
         public float phaseDuration = 12f;
+        [Header("Радиус кольца тотемов")]
         public float ringRadius = 8f;
+        [Header("Стан при появлении (сек)")]
         public float stunDurationOnSpawn = 1.0f;
     }
 
@@ -85,30 +119,49 @@ public class BossController : MonoBehaviour
         public float rayMaxDistance = 5000f;
     }
 
+    [Header("Включить отладочные логи")]
     public bool debugLogs = true;
     void Log(string msg) { if (debugLogs) Debug.Log($"[BOSS] {msg}"); }
 
-    public LayerMask playerMask = ~0;
-    public string playerTag = "Player";
+    [Header("Слой игрока")]
+    private LayerMask playerMask = 0;
+    [Header("Тег игрока")]
+    private string playerTag = "Player";
 
+    [Header("Максимальное здоровье босса")]
     public float maxHealth = 1500f;
-    [SerializeField] private float currentHealth;
+    [SerializeField, Header("Текущее здоровье босса")]
+    private float currentHealth;
+    [Header("Радиус агро")]
     public float aggroRadius = 18f;
 
+    [Header("Скорость погони")]
     public float chaseSpeed = 4.5f;
+    [Header("Скорость во время атаки")]
     public float attackMoveSpeed = 3.5f;
-    public bool useManualRotation = true;
-    public float chaseTurnSpeed = 720f;
-    public float pivotTurnSpeed = 1440f;
-    public float chaseRepathInterval = 0.15f;
-    public float chaseSampleRadius = 2.0f;
+    [Header("Использовать ручной поворот")]
+    private bool useManualRotation = true;
+    [Header("Скорость поворота при погоне")]
+    private float chaseTurnSpeed = 720f;
+    [Header("Скорость поворота на месте")]
+    private float pivotTurnSpeed = 1440f;
+    [Header("Интервал пересчёта пути (сек)")]
+    private float chaseRepathInterval = 0.15f;
+    [Header("Радиус выборки пути на навмеш")]
+    private float chaseSampleRadius = 2.0f;
 
+    [Header("Пауза между атаками (мин/макс)")]
     public Vector2 patternPause = new Vector2(1.0f, 1.6f);
 
+    [Header("Настройки атаки волнами")]
     public SlamSettings slam = new SlamSettings();
+    [Header("Настройки атаки воронами")]
     public RavenSettings raven = new RavenSettings();
+    [Header("Настройки рубящих атак")]
     public SlashSettings slash = new SlashSettings();
+    [Header("Настройки рывка")]
     public ChargeSettings charge = new ChargeSettings();
+    [Header("Настройки тотемов")]
     public TotemSettings totems = new TotemSettings();
     public WindupSettings windup = new WindupSettings();
     public GroundSettings ground = new GroundSettings();
