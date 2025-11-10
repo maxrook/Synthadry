@@ -94,12 +94,13 @@ public class BossController : MonoBehaviour
         public GameObject prefab;
         [Header("Регенерация HP/сек при тотемах")]
         public float regenPerSec = 8f;
-        [Header("Длительность фазы тотемов (сек)")]
-        public float phaseDuration = 12f;
         [Header("Радиус кольца тотемов")]
         public float ringRadius = 8f;
         [Header("Стан при появлении (сек)")]
         public float stunDurationOnSpawn = 1.0f;
+        [Header("Процент HP для появления тотемов (0–1)")]
+        [Range(0.05f, 1f)]
+        public float triggerHealthPercent = 0.25f;
     }
 
     [HideInInspector]
@@ -108,7 +109,7 @@ public class BossController : MonoBehaviour
         public float billboardSize = 1.2f;
         public float billboardHeight = 2.2f;
         public Color billboardColor = new Color(1f, 0.92f, 0.16f, 1f);
-        [Range(0f,1f)] public float pulseMinAlpha = 0.25f;
+        [Range(0f, 1f)] public float pulseMinAlpha = 0.25f;
         public float pulseSpeed = 8f;
     }
 
@@ -157,7 +158,7 @@ public class BossController : MonoBehaviour
     public SlamSettings slam = new SlamSettings();
     [Header("Настройки атаки воронами")]
     public RavenSettings raven = new RavenSettings();
-    [Header("Настройки рубящих атак")]
+    [Header("Настройки слешей")]
     public SlashSettings slash = new SlashSettings();
     [Header("Настройки рывка")]
     public ChargeSettings charge = new ChargeSettings();
@@ -311,8 +312,7 @@ public class BossController : MonoBehaviour
     IEnumerator ChooseAndExecutePattern()
     {
         isBusy = true;
-
-        if (!totemsTriggeredOnce && currentHealth <= maxHealth * 0.25f)
+        if (!totemsTriggeredOnce && currentHealth <= maxHealth * totems.triggerHealthPercent)
         {
             Log("Фаза тотемов.");
             yield return SpawnTotemsPhase();
@@ -321,9 +321,9 @@ public class BossController : MonoBehaviour
         else
         {
             int choice = Random.Range(0, 3);
-            if      (choice == 0) { Log("Паттерн: SLAM WAVES");   yield return SlamSeries(); }
+            if (choice == 0) { Log("Паттерн: SLAM WAVES"); yield return SlamSeries(); }
             else if (choice == 1) { Log("Паттерн: RAVEN STREAM"); yield return RavenStream(); }
-            else                  { Log("Паттерн: SLASH SERIES"); yield return SlashSeries(); }
+            else { Log("Паттерн: SLASH SERIES"); yield return SlashSeries(); }
 
             if (Time.time - lastChargeTime > charge.cooldown && Random.value < 0.6f)
             {
