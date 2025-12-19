@@ -54,6 +54,8 @@ public class MobController : MonoBehaviour, IPauseHandler
     [Header("Угол обзора (в градусах)")]
     public float viewAngle = 80f;
 
+    [SerializeField] private float hurtDuration = 0.35f;
+
     private float playerHealth;
     private int nextWaypoint = 0;
 
@@ -72,6 +74,9 @@ public class MobController : MonoBehaviour, IPauseHandler
 
     private bool isIdle = false;
     public Action<MobState> StateChanged;
+
+    private bool isHurt = false;
+    private Coroutine hurtCoroutine;
 
     void Start()
     {
@@ -127,24 +132,6 @@ public class MobController : MonoBehaviour, IPauseHandler
         if (health <= 0f)
             state = MobState.Dead;
 
-        // switch (state)
-        // {
-        //     case MobState.Patrol:
-        //         material.color = Color.green;
-        //         break;
-        //     case MobState.Run:
-        //         material.color = Color.magenta;
-        //         break;
-        //     case MobState.Attack:
-        //         material.color = Color.red;
-        //         break;
-        //     case MobState.Die:
-        //         material.color = Color.black;
-        //         break;
-        //     default:
-        //         break;
-        // }
-
         switch (state)
         {
             case MobState.Patrol:
@@ -165,7 +152,16 @@ public class MobController : MonoBehaviour, IPauseHandler
 
         if (log) Debug.Log(state);
         currentAnimState = (int)state;
-        if (!isIdle)
+
+        if (isDead)
+        {
+            animator.SetInteger("state", 4);
+        }
+        else if (isHurt)
+        {
+            animator.SetInteger("state", 5);
+        }
+        else if (!isIdle)
         {
             animator.SetInteger("state", currentAnimState);
         }
@@ -299,30 +295,74 @@ public class MobController : MonoBehaviour, IPauseHandler
         {
             Die();
         }
+        else
+        {
+            StartHurt();
+        }
     }
+
+    private void StartHurt()
+    {
+        if (isDead) return;
+
+        if (hurtCoroutine != null)
+            StopCoroutine(hurtCoroutine);
+
+        bool prevIdle = isIdle;
+        bool prevStopped = Enemy.isStopped;
+
+        isHurt = true;
+        isIdle = false;
+
+        Enemy.isStopped = true;
+        Enemy.ResetPath();
+
+        hurtCoroutine = StartCoroutine(HurtRoutine(prevIdle, prevStopped));
+    }
+
+    private IEnumerator HurtRoutine(bool prevIdle, bool prevStopped)
+    {
+        yield return new WaitForSeconds(hurtDuration);
+
+        isHurt = false;
+        hurtCoroutine = null;
+
+        if (isDead || health <= 0f) yield break;
+
+        isIdle = prevIdle;
+        Enemy.isStopped = prevStopped;
+    }
+
     private bool isDead = false;
 
     [ContextMenu("die")]
-private void Die()
-{
-    if (isDead) return;
-    isDead = true;
+    private void Die()
+    {
+        if (isDead) return;
+        isDead = true;
 
-    health = 0f;
-    state = MobState.Dead;
+        if (hurtCoroutine != null)
+        {
+            StopCoroutine(hurtCoroutine);
+            hurtCoroutine = null;
+        }
+        isHurt = false;
 
-    Enemy.isStopped = true;
-    Enemy.ResetPath();
+        health = 0f;
+        state = MobState.Dead;
 
-    isIdle = true;                 
-    animator.enabled = true;      
-    animator.speed = 1f;
-    animator.SetInteger("state", 4);  
-    animator.Update(0f);          
+        Enemy.isStopped = true;
+        Enemy.ResetPath();
+
+        isIdle = true;
+        animator.enabled = true;
+        animator.speed = 1f;
+        animator.SetInteger("state", 4);
+        animator.Update(0f);
 
 
-    StartCoroutine(DyingRoutine());
-}
+        StartCoroutine(DyingRoutine());
+    }
 
     private IEnumerator DyingRoutine()
     {
@@ -343,8 +383,8 @@ private void Die()
 
     public void SetPaused(bool isPaused)
     {
-        Enemy.isStopped = isPaused; // ��������� SetDirection
-        enabled = !isPaused; // ��������� Update, ���� ����� = true, �� enabled ������ ���� ����� = false
+        Enemy.isStopped = isPaused;
+        enabled = !isPaused; 
         if (isPaused)
             animator.speed = 0f;
         else

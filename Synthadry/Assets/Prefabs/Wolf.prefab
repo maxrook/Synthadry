@@ -39,7 +39,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &7687508790076389808
 Animator:
-  serializedVersion: 5
+  serializedVersion: 7
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -53,6 +53,7 @@ Animator:
   m_ApplyRootMotion: 0
   m_LinearVelocityBlending: 0
   m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
   m_WarningMessage: 
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
@@ -71,6 +72,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   state: 0
+  log: 0
   waypoints:
   - {x: -22.281208, y: 3.3042605, z: 95.314285}
   - {x: -22.281208, y: 3.3042605, z: 105.44}
@@ -85,6 +87,7 @@ MonoBehaviour:
   timeUntilStop: 15
   timeUntilDisappearance: 10
   viewAngle: 120
+  hurtDuration: 0.35
 --- !u!195 &7591353528665746674
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -124,7 +127,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 1, y: 1.3, z: 3}
   m_Center: {x: 0, y: 0.8, z: 0.3}
