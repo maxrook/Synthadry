@@ -174,7 +174,7 @@ public class MobController : MonoBehaviour, IPauseHandler
             animator.SetInteger("state", 4);
         }
 
-        if(log)Debug.Log("State changed to: " + currentAnimState);
+        if (log) Debug.Log("State changed to: " + currentAnimState);
         // RotateToMoveDirection();
 
     }
@@ -300,22 +300,40 @@ public class MobController : MonoBehaviour, IPauseHandler
             Die();
         }
     }
-    [ContextMenu("die")]
-    private void Die()
-    {
-        health = 0f;
-        state = MobState.Dead;
-        StateChanged.Invoke(state);
+    private bool isDead = false;
 
-        Enemy.isStopped = true;
-        StartCoroutine(Diyng(timeUntilDisappearance));
-      
+    [ContextMenu("die")]
+private void Die()
+{
+    if (isDead) return;
+    isDead = true;
+
+    health = 0f;
+    state = MobState.Dead;
+
+    Enemy.isStopped = true;
+    Enemy.ResetPath();
+
+    isIdle = true;                 
+    animator.enabled = true;      
+    animator.speed = 1f;
+    animator.SetInteger("state", 4);  
+    animator.Update(0f);          
+
+
+    StartCoroutine(DyingRoutine());
+}
+
+    private IEnumerator DyingRoutine()
+    {
+        yield return new WaitForSeconds(timeUntilDisappearance);
+        Destroy(gameObject);
     }
 
     private IEnumerator Diyng(float time)
     {
         yield return new WaitForSeconds(time);
-            Destroy(gameObject);
+        Destroy(gameObject);
     }
 
     public float GetHealth()
