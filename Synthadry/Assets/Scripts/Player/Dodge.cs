@@ -3,20 +3,52 @@ using System.Collections;
 
 public class PlayerDodge : MonoBehaviour
 {
-    [Header("Настройки рывка")]
-    [Tooltip("Длина рывка")]
+    [Header("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
     public float dodgeDistance = 3.5f;
-    [Tooltip("Горячая клавиша")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
     public KeyCode dodgeKey = KeyCode.Q;
-    [Tooltip("Время рывка")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
     public float dodgeDuration = 0.2f;
-    [Tooltip("Отсчёт до следующего рывка")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
     public float dodgeCooldown = 0.5f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ")]
+    public float dodgeStaminaCost = 30f;
+
+    [Header("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    public KeyCode chargedDodgeKey = KeyCode.E;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    public float maxChargedDodgeDistance = 7f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ)")]
+    public float chargedDodgeStaminaMultiplier = 1.5f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (0 - пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, 1 - пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)")]
+    [Range(0f, 1f)]
+    public float chargeSlowdownFactor = 0.5f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    public float chargeSpeed = 2f;
+
+    [Header("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ")]
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ")]
+    public float maxStamina = 100f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ)")]
+    public float staminaRegenerationRate = 40f;
+    [Tooltip("пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ")]
+    public float staminaRegenerationDelay = 2.5f;
+
+    private float _currentStamina;
     private bool _isDodging = false;
+    private bool _isChargingDodge = false;
     private float _dodgeCooldownTimer = 0f;
+    private float _staminaRegenerationTimer = 0f;
+    private float _chargedDodgeCharge = 0f; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     private CharacterController _characterController;
-    private PlayerMovement _playerMovement;
+    private PlayerMovement _playerMovement; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅ PlayerMovement пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ speed
     private Vector3 _dodgeDirection;
+    private float _originalSpeed; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+
+    // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ)
+    public UnityEngine.UI.Slider staminaSlider;
 
 
     void Start()
@@ -36,6 +68,10 @@ public class PlayerDodge : MonoBehaviour
             enabled = false;
             return;
         }
+
+        _currentStamina = maxStamina;
+        _originalSpeed = _playerMovement.moveSpeed; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        UpdateStaminaUI();
     }
 
     void Update()
@@ -45,28 +81,110 @@ public class PlayerDodge : MonoBehaviour
             _dodgeCooldownTimer -= Time.deltaTime;
         }
 
-        if (Input.GetKeyDown(dodgeKey) && !_isDodging && _dodgeCooldownTimer <= 0)
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ)
+        if (Input.GetKeyDown(dodgeKey) && !_isDodging && !_isChargingDodge && _dodgeCooldownTimer <= 0 && _currentStamina >= dodgeStaminaCost)
         {
-            StartCoroutine(Dodge());
+            StartCoroutine(Dodge(dodgeDistance, dodgeStaminaCost));
         }
+
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ)
+        if (Input.GetKey(chargedDodgeKey) && !_isDodging && _currentStamina > 0)
+        {
+            StartChargingDodge();
+        }
+
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+        if (Input.GetKeyUp(chargedDodgeKey) && _isChargingDodge)
+        {
+            ReleaseChargedDodge();
+        }
+
+        //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        if (_currentStamina < maxStamina)
+        {
+            if (_staminaRegenerationTimer > 0)
+            {
+                _staminaRegenerationTimer -= Time.deltaTime;
+            }
+            else
+            {
+                _currentStamina = Mathf.Min(_currentStamina + staminaRegenerationRate * Time.deltaTime, maxStamina);
+                UpdateStaminaUI();
+            }
+        }
+
+        UpdateStaminaUI(); //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     }
 
-    private IEnumerator Dodge()
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+    private IEnumerator Dodge(float distance, float staminaCost)
     {
         _isDodging = true;
         _dodgeCooldownTimer = dodgeCooldown;
+        _staminaRegenerationTimer = staminaRegenerationDelay;
         _dodgeDirection = GetDodgeDirection();
+        _currentStamina -= staminaCost;
+        UpdateStaminaUI();
 
         float timer = 0;
         while (timer < dodgeDuration)
         {
-            _characterController.Move(_dodgeDirection * (dodgeDistance / dodgeDuration) * Time.deltaTime);
+            _characterController.Move(_dodgeDirection * (distance / dodgeDuration) * Time.deltaTime);
             timer += Time.deltaTime;
             yield return null;
         }
 
         _isDodging = false;
     }
+
+    // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+    private void StartChargingDodge()
+    {
+        _isChargingDodge = true;
+        _chargedDodgeCharge = 0f;
+        _playerMovement.moveSpeed = _originalSpeed * (1 - chargeSlowdownFactor); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+    }
+
+    // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+    void FixedUpdate()
+    {
+        if (_isChargingDodge)
+        {
+            //пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+            _chargedDodgeCharge = Mathf.Clamp01(_chargedDodgeCharge + chargeSpeed * Time.fixedDeltaTime);
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+            float staminaDrain = Mathf.Lerp(0f, maxStamina, _chargedDodgeCharge) * Time.fixedDeltaTime;
+            _currentStamina -= staminaDrain;
+
+            UpdateStaminaUI();
+
+            if (_currentStamina <= 0)
+            {
+                //пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+                ReleaseChargedDodge();
+            }
+        }
+    }
+
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+    private void ReleaseChargedDodge()
+    {
+        _isChargingDodge = false;
+        _playerMovement.moveSpeed = _originalSpeed; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+        _staminaRegenerationTimer = staminaRegenerationDelay;
+
+        // пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+        float dodgeDistance = Mathf.Lerp(0, maxChargedDodgeDistance, _chargedDodgeCharge);
+        float staminaCost = Mathf.Lerp(0, maxStamina * chargedDodgeStaminaMultiplier, _chargedDodgeCharge);
+
+        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
+        staminaCost = Mathf.Min(staminaCost, maxStamina);
+
+        //Debug.Log("Charged dodge: Distance = " + dodgeDistance + ", Stamina Cost = " + staminaCost);
+
+        StartCoroutine(Dodge(dodgeDistance, staminaCost));
+    }
+
 
     private Vector3 GetDodgeDirection()
     {
@@ -76,15 +194,24 @@ public class PlayerDodge : MonoBehaviour
 
         if (horizontalInput != 0 || verticalInput != 0)
         {
-            // Рывок при нажатых WASD
+            // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ WASD
             dodgeDir = transform.forward * verticalInput + transform.right * horizontalInput;
             dodgeDir.Normalize();
         }
         else
         {
-            // Рывок назад, если нету нажатых WASD
+            // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ WASD
             dodgeDir = -transform.forward;
         }
         return dodgeDir;
+    }
+
+    // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ UI пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+    private void UpdateStaminaUI()
+    {
+        if (staminaSlider != null)
+        {
+            staminaSlider.value = _currentStamina / maxStamina;
+        }
     }
 }
