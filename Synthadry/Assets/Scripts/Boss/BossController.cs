@@ -7,472 +7,434 @@ using UnityEngine.AI;
 [RequireComponent(typeof(Collider))]
 public class BossController : MonoBehaviour
 {
-    public enum BossState { Idle, Chasing, Attacking, Stunned, Dead }
-
-    [System.Serializable]
-    public class SlamSettings
-    {
-        [Header("Префаб волны")]
-        public GameObject wavePrefab;
-        [Header("Количество ударов подряд")]
-        public int seriesCount = 4;
-        [Header("Интервал между волнами (сек)")]
-        public float interval = 0.75f;
-        [Header("Урон от волны")]
-        public float damage = 20f;
-        [Header("Скорость обычной волны")]
-        public float normalWaveSpeed = 9f;
-        [Header("Макс. радиус обычной волны")]
-        public float normalWaveMaxRadius = 15f;
-        [Header("Скорость широкой волны")]
-        public float wideWaveSpeed = 10.5f;
-        [Header("Макс. радиус широкой волны")]
-        public float wideWaveMaxRadius = 19f;
-    }
-
-    [System.Serializable]
-    public class RavenSettings
-    {
-        [Header("Префаб воронов")]
-        public GameObject projectilePrefab;
-        [Header("Количество выстрелов в серии")]
-        public int burst = 12;
-        [Header("Интервал между выстрелами (сек)")]
-        public float rate = 0.09f;
-        [Header("Скорость полёта снаряда")]
-        public float speed = 16f;
-        [Header("Время жизни снаряда (сек)")]
-        public float life = 2.5f;
-        [Header("Урон от снаряда")]
-        public float damage = 10f;
-        [Header("Разброс угла выстрелов")]
-        public float spreadAngle = 8f;
-    }
-
-    [System.Serializable]
-    public class SlashSettings
-    {
-        [Header("Префаб зоны удара")]
-        public GameObject hitboxPrefab;
-        [Header("Количество ударов")]
-        public int count = 1;
-        [Header("Подготовка к удару (сек)")]
-        public float windup = 0.4f;
-        [Header("Активное окно удара (сек)")]
-        public float active = 0.25f;
-        [Header("Задержка после удара (сек)")]
-        public float recovery = 0.3f;
-        [Header("Урон от удара")]
-        public float damage = 25f;
-        [Header("Дуга атаки (градусы)")]
-        public float arcDegrees = 100f;
-        [Header("Радиус удара")]
-        public float radius = 4.5f;
-        [Header("Макс. время ожидание игрока пока он не войдёт в радиус атаки (сек)")]
-        public float waitMax = 3.0f;
-    }
-
-    [System.Serializable]
-    public class ChargeSettings
-    {
-        [Header("Подготовка перед рывком (сек)")]
-        public float windup = 0.5f;
-        [Header("Скорость рывка")]
-        public float speed = 18f;
-        [Header("Длительность рывка (сек)")]
-        public float duration = 0.7f;
-        [Header("Перезарядка рывка (сек)")]
-        public float cooldown = 2.0f;
-        [Header("Урон от рывка")]
-        public float damage = 30f;
-    }
-
-    [System.Serializable]
-    public class TotemSettings
-    {
-        [Header("Префаб тотема")]
-        public GameObject prefab;
-        [Header("Регенерация HP/сек при тотемах")]
-        public float regenPerSec = 8f;
-        [Header("Радиус кольца тотемов")]
-        public float ringRadius = 8f;
-        [Header("Стан при появлении (сек)")]
-        public float stunDurationOnSpawn = 1.0f;
-        [Header("Процент HP для появления тотемов (0–1)")]
-        [Range(0.05f, 1f)]
-        public float triggerHealthPercent = 0.25f;
-    }
-
-    [HideInInspector]
-    public class WindupSettings
-    {
-        public float billboardSize = 1.2f;
-        public float billboardHeight = 2.2f;
-        public Color billboardColor = new Color(1f, 0.92f, 0.16f, 1f);
-        [Range(0f, 1f)] public float pulseMinAlpha = 0.25f;
-        public float pulseSpeed = 8f;
-    }
-
-    [HideInInspector]
-    public class GroundSettings
-    {
-        public float rayStartHeight = 1000f;
-        public float rayMaxDistance = 5000f;
-    }
-
-    [Header("Включить отладочные логи")]
-    public bool debugLogs = true;
-    void Log(string msg) { if (debugLogs) Debug.Log($"[BOSS] {msg}"); }
-
-    [Header("Слой игрока")]
-    private LayerMask playerMask = 0;
-    [Header("Тег игрока")]
-    private string playerTag = "Player";
-
-    [Header("Максимальное здоровье босса")]
-    public float maxHealth = 1500f;
-    [SerializeField, Header("Текущее здоровье босса")]
-    private float currentHealth;
-    [Header("Радиус агро")]
-    public float aggroRadius = 18f;
-
-    [Header("Скорость погони")]
-    public float chaseSpeed = 4.5f;
-    [Header("Скорость во время атаки")]
-    public float attackMoveSpeed = 3.5f;
-    [Header("Использовать ручной поворот")]
-    private bool useManualRotation = true;
-    [Header("Скорость поворота при погоне")]
-    private float chaseTurnSpeed = 720f;
-    [Header("Скорость поворота на месте")]
-    private float pivotTurnSpeed = 1440f;
-    [Header("Интервал пересчёта пути (сек)")]
-    private float chaseRepathInterval = 0.15f;
-    [Header("Радиус выборки пути на навмеш")]
-    private float chaseSampleRadius = 2.0f;
-
-    [Header("Пауза между атаками (мин/макс)")]
-    public Vector2 patternPause = new Vector2(1.0f, 1.6f);
+    [Header("Конфиг босса")]
+    [SerializeField] private BossConfigSO _config;
 
     [Header("Настройки атаки волнами")]
-    public SlamSettings slam = new SlamSettings();
+    [SerializeField] private SlamSettingsSO _slam;
+
     [Header("Настройки атаки воронами")]
-    public RavenSettings raven = new RavenSettings();
+    [SerializeField] private RavenSettingsSO _raven;
+
     [Header("Настройки слешей")]
-    public SlashSettings slash = new SlashSettings();
+    [SerializeField] private SlashSettingsSO _slash;
+
     [Header("Настройки рывка")]
-    public ChargeSettings charge = new ChargeSettings();
+    [SerializeField] private ChargeSettingsSO _charge;
+
     [Header("Настройки тотемов")]
-    public TotemSettings totems = new TotemSettings();
-    public WindupSettings windup = new WindupSettings();
-    public GroundSettings ground = new GroundSettings();
+    [SerializeField] private TotemSettingsSO _totems;
 
-    private NavMeshAgent agent;
-    private Collider bossCol;
-    private BossState state = BossState.Idle;
-    private bool fightStarted;
-    private bool isBusy;
-    private float lastChargeTime;
-    private readonly List<Totem> activeTotems = new();
-    private bool totemsTriggeredOnce = false;
+    [Header("Debug")]
+    [SerializeField] private bool _debugLogs = false;
 
-    private float centerToBottomOffsetY;
-    private float nextPatternTime = 0f;
-    private float chaseRepathTimer = 0f;
+    private LayerMask _playerMask = 0;
+    private string _playerTag = "Player";
+    private bool _useManualRotation = true;
+    private float _chaseTurnSpeed = 720f;
+    private float _pivotTurnSpeed = 1440f;
+    private float _chaseRepathInterval = 0.15f;
+    private float _chaseSampleRadius = 2.0f;
 
-    private GameObject windupBillboardGO;
-    private Material windupBillboardMat;
-    private bool windupOn;
-    private float windupLocalTime;
+    private float _windupBillboardSize = 1.2f;
+    private float _windupBillboardHeight = 2.2f;
+    private Color _windupBillboardColor = new Color(1f, 0.92f, 0.16f, 1f);
+    private float _windupPulseMinAlpha = 0.25f;
+    private float _windupPulseSpeed = 8f;
 
-    private Transform player;
+    private float _groundRayStartHeight = 1000f;
+    private float _groundRayMaxDistance = 5000f;
+
+    [SerializeField, Header("Текущее здоровье босса")]
+    private float _currentHealth;
+
+    private NavMeshAgent _agent;
+    private Collider _bossCol;
+
+    private bool _fightStarted;
+    private bool _isAttacking;
+    private bool _isStunned;
+    private bool _isDead;
+
+    private float _lastChargeTime;
+    private readonly List<Totem> _activeTotems = new();
+    private bool _totemsTriggeredOnce = false;
+
+    private float _centerToBottomOffsetY;
+    private float _nextPatternTime = 0f;
+    private float _chaseRepathTimer = 0f;
+
+    private GameObject _windupBillboardGO;
+    private Material _windupBillboardMat;
+    private bool _windupOn;
+    private float _windupLocalTime;
+
+    private Transform _player;
+
+    void Log(string msg)
+    {
+        if (_debugLogs)
+            Debug.Log($"[BOSS] {msg}");
+    }
 
     void Awake()
     {
-        agent = GetComponent<NavMeshAgent>();
-        bossCol = GetComponent<Collider>();
-        currentHealth = maxHealth;
+        _playerMask = LayerMask.GetMask("Default");
+        _agent = GetComponent<NavMeshAgent>();
+        _bossCol = GetComponent<Collider>();
+
+        if (_config != null)
+            _currentHealth = _config.MaxHealth;
     }
 
     void Start()
     {
-        var p = GameObject.FindGameObjectWithTag(playerTag);
-        if (p) player = p.transform;
+        var p = GameObject.FindGameObjectWithTag(_playerTag);
+        if (p) _player = p.transform;
         else Log("Игрок не найден по тегу.");
 
-        centerToBottomOffsetY = transform.position.y - bossCol.bounds.min.y;
+        _centerToBottomOffsetY = transform.position.y - _bossCol.bounds.min.y;
 
         if (NavMesh.SamplePosition(transform.position, out var hit, 2f, NavMesh.AllAreas))
-            agent.Warp(hit.position);
+            _agent.Warp(hit.position);
 
-        agent.updatePosition = true;
-        agent.updateRotation = !useManualRotation;
-        agent.autoBraking = false;
-        agent.angularSpeed = useManualRotation ? 0f : 1200f;
-        agent.acceleration = 80f;
-        agent.stoppingDistance = 2f;
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        _agent.updatePosition = true;
+        _agent.updateRotation = !_useManualRotation;
+        _agent.autoBraking = false;
+        _agent.angularSpeed = _useManualRotation ? 0f : 1200f;
+        _agent.acceleration = 80f;
+        _agent.stoppingDistance = 2f;
+        _agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
 
         EnsureWindupIndicator();
 
-        Log($"Старт. HP={currentHealth}/{maxHealth}");
+        Log($"Старт. HP={_currentHealth}/{_config.MaxHealth}");
     }
 
     void Update()
     {
-        if (windupOn && windupBillboardGO != null)
+        UpdateWindupIndicator();
+
+        if (_isDead)
+            return;
+
+        if (_player == null)
         {
-            var cam = Camera.main;
-            if (cam)
-                windupBillboardGO.transform.rotation = Quaternion.LookRotation(cam.transform.forward, Vector3.up);
-
-            windupLocalTime += Time.deltaTime * windup.pulseSpeed;
-            float a = Mathf.Lerp(windup.pulseMinAlpha, 1f, 0.5f + 0.5f * Mathf.Sin(windupLocalTime));
-            if (windupBillboardMat != null)
-            {
-                Color c = windup.billboardColor; c.a = a;
-                windupBillboardMat.color = c;
-            }
-
-            Vector3 basePos = bossCol.bounds.max + Vector3.up * (windup.billboardHeight - (transform.position.y - bossCol.bounds.max.y));
-            windupBillboardGO.transform.position = basePos;
-            windupBillboardGO.transform.localScale = Vector3.one * windup.billboardSize;
+            var p = GameObject.FindGameObjectWithTag(_playerTag);
+            if (p) _player = p.transform;
         }
 
-        if (state == BossState.Dead) return;
+        TryStartFight();
+        UpdateTotemRegen();
+        CheckDeath();
 
-        if (player == null)
+        if (_isDead || !_fightStarted)
+            return;
+
+        if (!_isAttacking && !_isStunned)
+            UpdateChase();
+
+        if (!_isAttacking && !_isStunned && Time.time >= _nextPatternTime)
+            StartCoroutine(ChooseAndExecutePattern());
+    }
+
+    private void UpdateWindupIndicator()
+    {
+        if (!_windupOn || _windupBillboardGO == null)
+            return;
+
+        var cam = Camera.main;
+        if (cam)
+            _windupBillboardGO.transform.rotation = Quaternion.LookRotation(cam.transform.forward, Vector3.up);
+
+        _windupLocalTime += Time.deltaTime * _windupPulseSpeed;
+        float a = Mathf.Lerp(_windupPulseMinAlpha, 1f, 0.5f + 0.5f * Mathf.Sin(_windupLocalTime));
+
+        if (_windupBillboardMat != null)
         {
-            var p = GameObject.FindGameObjectWithTag(playerTag);
-            if (p) player = p.transform;
+            Color c = _windupBillboardColor;
+            c.a = a;
+            _windupBillboardMat.color = c;
         }
 
-        if (!fightStarted && player != null &&
-            Vector3.Distance(transform.position, player.position) <= aggroRadius)
+        Vector3 basePos = _bossCol.bounds.max + Vector3.up * (_windupBillboardHeight - (transform.position.y - _bossCol.bounds.max.y));
+        _windupBillboardGO.transform.position = basePos;
+        _windupBillboardGO.transform.localScale = Vector3.one * _windupBillboardSize;
+    }
+
+    private void TryStartFight()
+    {
+        if (_fightStarted || _player == null)
+            return;
+
+        if (Vector3.Distance(transform.position, _player.position) <= _config.AggroRadius)
         {
-            fightStarted = true;
-            state = BossState.Chasing;
+            _fightStarted = true;
             Log("Бой начался.");
         }
+    }
 
-        if (activeTotems.Count > 0)
-            currentHealth = Mathf.Min(maxHealth, currentHealth + totems.regenPerSec * Time.deltaTime);
+    private void UpdateTotemRegen()
+    {
+        if (_activeTotems.Count > 0)
+            _currentHealth = Mathf.Min(_config.MaxHealth, _currentHealth + _totems.RegenPerSec * Time.deltaTime);
+    }
 
-        if (currentHealth <= 0f)
-        {
-            currentHealth = 0f;
-            StopAllCoroutines();
-            state = BossState.Dead;
-            agent.isStopped = true;
-            agent.velocity = Vector3.zero;
-            EnableWindupIndicator(false);
-            Log("Босс погиб.");
+    private void CheckDeath()
+    {
+        if (_currentHealth > 0f)
             return;
-        }
 
-        if (!fightStarted) return;
+        _currentHealth = 0f;
+        StopAllCoroutines();
 
-        if (!isBusy && state != BossState.Stunned)
+        _isDead = true;
+        _isAttacking = false;
+        _isStunned = false;
+
+        if (_agent != null && _agent.enabled)
         {
-            state = BossState.Chasing;
-            if (!agent.enabled) agent.enabled = true;
-            agent.isStopped = false;
-            agent.speed = chaseSpeed;
+            _agent.isStopped = true;
+            _agent.velocity = Vector3.zero;
+        }
 
-            chaseRepathTimer -= Time.deltaTime;
-            if (chaseRepathTimer <= 0f)
-            {
-                chaseRepathTimer = Mathf.Max(0.05f, chaseRepathInterval);
-                if (player != null)
-                {
-                    Vector3 goal = player.position;
-                    if (NavMesh.SamplePosition(goal, out var near, chaseSampleRadius, NavMesh.AllAreas))
-                        agent.SetDestination(near.position);
-                    else
-                        agent.SetDestination(goal);
-                }
-            }
+        EnableWindupIndicator(false);
+        Log("Босс погиб.");
+    }
 
-            if (useManualRotation && player != null)
+    private void UpdateChase()
+    {
+        if (!_agent.enabled)
+            _agent.enabled = true;
+
+        _agent.isStopped = false;
+        _agent.speed = _config.ChaseSpeed;
+
+        _chaseRepathTimer -= Time.deltaTime;
+        if (_chaseRepathTimer <= 0f)
+        {
+            _chaseRepathTimer = Mathf.Max(0.05f, _chaseRepathInterval);
+
+            if (_player != null)
             {
-                Vector3 dir = player.position - transform.position; dir.y = 0f;
-                if (dir.sqrMagnitude > 0.001f)
-                {
-                    float ts = (agent.velocity.sqrMagnitude < 0.01f) ? pivotTurnSpeed : chaseTurnSpeed;
-                    Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
-                    transform.rotation = Quaternion.RotateTowards(transform.rotation, look, ts * Time.deltaTime);
-                }
+                Vector3 goal = _player.position;
+                if (NavMesh.SamplePosition(goal, out var near, _chaseSampleRadius, NavMesh.AllAreas))
+                    _agent.SetDestination(near.position);
+                else
+                    _agent.SetDestination(goal);
             }
         }
 
-        if (!isBusy && state != BossState.Stunned && state != BossState.Dead && Time.time >= nextPatternTime)
-            StartCoroutine(ChooseAndExecutePattern());
+        if (_useManualRotation && _player != null)
+        {
+            Vector3 dir = _player.position - transform.position;
+            dir.y = 0f;
+
+            if (dir.sqrMagnitude > 0.001f)
+            {
+                float turnSpeed = _agent.velocity.sqrMagnitude < 0.01f ? _pivotTurnSpeed : _chaseTurnSpeed;
+                Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, look, turnSpeed * Time.deltaTime);
+            }
+        }
     }
 
     IEnumerator ChooseAndExecutePattern()
     {
-        isBusy = true;
-        if (!totemsTriggeredOnce && currentHealth <= maxHealth * totems.triggerHealthPercent)
+        _isAttacking = true;
+
+        if (!_totemsTriggeredOnce && _currentHealth <= _config.MaxHealth * _totems.TriggerHealthPercent)
         {
             Log("Фаза тотемов.");
             yield return SpawnTotemsPhase();
-            totemsTriggeredOnce = true;
+            _totemsTriggeredOnce = true;
         }
         else
         {
             int choice = Random.Range(0, 3);
-            if (choice == 0) { Log("Паттерн: SLAM WAVES"); yield return SlamSeries(); }
-            else if (choice == 1) { Log("Паттерн: RAVEN STREAM"); yield return RavenStream(); }
-            else { Log("Паттерн: SLASH SERIES"); yield return SlashSeries(); }
 
-            if (Time.time - lastChargeTime > charge.cooldown && Random.value < 0.6f)
+            if (choice == 0)
+            {
+                Log("Паттерн: SLAM WAVES");
+                yield return SlamSeries();
+            }
+            else if (choice == 1)
+            {
+                Log("Паттерн: RAVEN STREAM");
+                yield return RavenStream();
+            }
+            else
+            {
+                Log("Паттерн: SLASH SERIES");
+                yield return SlashSeries();
+            }
+
+            if (!_isDead && Time.time - _lastChargeTime > _charge.Cooldown && Random.value < 0.6f)
             {
                 Log("Паттерн: CHARGE");
                 yield return ChargeRam();
-                lastChargeTime = Time.time;
+                _lastChargeTime = Time.time;
             }
         }
 
-        float pause = Random.Range(patternPause.x, patternPause.y);
-        nextPatternTime = Time.time + pause;
-        isBusy = false;
+        if (!_isDead)
+        {
+            float pause = Random.Range(_config.PatternPause.x, _config.PatternPause.y);
+            _nextPatternTime = Time.time + pause;
+        }
+
+        _isAttacking = false;
     }
 
     IEnumerator SlamSeries()
     {
-        state = BossState.Attacking;
-        agent.isStopped = true;
-        agent.velocity = Vector3.zero;
-
-        FaceTarget(player ? player.position : transform.position + transform.forward);
-
-        for (int i = 0; i < slam.seriesCount; i++)
+        if (_agent.enabled)
         {
+            _agent.isStopped = true;
+            _agent.velocity = Vector3.zero;
+        }
+
+        FaceTarget(_player ? _player.position : transform.position + transform.forward);
+
+        for (int i = 0; i < _slam.SeriesCount; i++)
+        {
+            if (_isDead)
+                yield break;
+
             yield return new WaitForSeconds(0.2f);
 
             Vector3 gpos = GetGroundPointUnderBoss();
-            bool wide = (i == slam.seriesCount - 1);
+            bool wide = i == _slam.SeriesCount - 1;
 
-            var go = Instantiate(slam.wavePrefab, gpos, Quaternion.identity);
+            var go = Instantiate(_slam.WavePrefab, gpos, Quaternion.identity);
             var wave = go.GetComponent<GroundWave>();
-            wave.debugLogs = debugLogs;
+            wave.DebugLogs = _debugLogs;
             wave.Init(
                 owner: this,
                 origin: gpos,
-                moveSpeed: wide ? slam.wideWaveSpeed : slam.normalWaveSpeed,
-                maxRadius: wide ? slam.wideWaveMaxRadius : slam.normalWaveMaxRadius,
+                moveSpeed: wide ? _slam.WideWaveSpeed : _slam.NormalWaveSpeed,
+                maxRadius: wide ? _slam.WideWaveMaxRadius : _slam.NormalWaveMaxRadius,
                 thickness: 1.2f,
                 height: 0.5f,
-                damage: slam.damage,
-                playerMask: playerMask,
-                playerTag: playerTag
+                damage: _slam.Damage,
+                playerMask: _playerMask,
+                playerTag: _playerTag
             );
 
-            yield return new WaitForSeconds(slam.interval);
+            yield return new WaitForSeconds(_slam.Interval);
         }
 
-        state = BossState.Chasing;
-        agent.isStopped = false;
+        if (!_isDead && _agent.enabled)
+            _agent.isStopped = false;
     }
 
     IEnumerator RavenStream()
     {
-        state = BossState.Attacking;
-        agent.isStopped = true;
+        if (_agent.enabled)
+            _agent.isStopped = true;
 
-        Vector3 dir = player ? (player.position - transform.position).normalized : transform.forward;
+        Vector3 dir = _player ? (_player.position - transform.position).normalized : transform.forward;
         FaceTarget(transform.position + dir);
 
-        for (int i = 0; i < raven.burst; i++)
+        for (int i = 0; i < _raven.Burst; i++)
         {
-            float off = Random.Range(-raven.spreadAngle, raven.spreadAngle);
+            if (_isDead)
+                yield break;
+
+            float off = Random.Range(-_raven.SpreadAngle, _raven.SpreadAngle);
             Quaternion q = Quaternion.AngleAxis(off, Vector3.up);
             Vector3 shotDir = q * dir;
 
-            var go = Instantiate(raven.projectilePrefab, transform.position + Vector3.up * 1.0f, Quaternion.LookRotation(shotDir, Vector3.up));
-            var rp = go.GetComponent<RavenProjectile>();
-            rp.debugLogs = debugLogs;
-            rp.Init(this, shotDir, raven.speed, raven.life, raven.damage, playerMask, playerTag);
+            var go = Instantiate(
+                _raven.ProjectilePrefab,
+                transform.position + Vector3.up * 1.0f,
+                Quaternion.LookRotation(shotDir, Vector3.up));
 
-            yield return new WaitForSeconds(raven.rate);
+            var rp = go.GetComponent<RavenProjectile>();
+            rp.DebugLogs = _debugLogs;
+            rp.Init(this, shotDir, _raven.Speed, _raven.Life, _raven.Damage, _playerMask, _playerTag);
+
+            yield return new WaitForSeconds(_raven.Rate);
         }
 
-        state = BossState.Chasing;
-        agent.isStopped = false;
+        if (!_isDead && _agent.enabled)
+            _agent.isStopped = false;
     }
 
     IEnumerator SlashSeries()
     {
-        state = BossState.Attacking;
-        agent.isStopped = true;
+        if (_agent.enabled)
+            _agent.isStopped = true;
 
-        for (int i = 0; i < slash.count; i++)
+        for (int i = 0; i < _slash.Count; i++)
         {
+            if (_isDead)
+                yield break;
+
             EnableWindupIndicator(true);
 
-            float waited = 0f;
-            while (player && PlanarDistance(transform.position, player.position) > slash.radius)
-            {
-                if (slash.waitMax > 0f)
-                {
-                    waited += Time.deltaTime;
-                    if (waited >= slash.waitMax)
-                    {
-                        EnableWindupIndicator(false);
-                        state = BossState.Chasing;
-                        agent.isStopped = false;
-                        yield break;
-                    }
-                }
-                FaceTarget(player.position);
-                yield return null;
-            }
-
-
             float wind = 0f;
-            while (wind < slash.windup)
+            while (wind < _slash.Windup)
             {
-                if (player) FaceTarget(player.position);
+                if (_isDead)
+                {
+                    EnableWindupIndicator(false);
+                    yield break;
+                }
+
+                if (_player)
+                    FaceTarget(_player.position);
+
                 wind += Time.deltaTime;
                 yield return null;
             }
 
             EnableWindupIndicator(false);
 
-            if (player && PlanarDistance(transform.position, player.position) > slash.radius)
-            {
-                continue;
-            }
+            if (_player)
+                FaceTarget(_player.position);
 
             Quaternion rot = transform.rotation;
-            Vector3 spawnPos = GetGroundPointUnderBoss() + Vector3.up * 0.02f;
-            var hb = Instantiate(slash.hitboxPrefab, spawnPos, rot);
-            var hitbox = hb.GetComponent<SlashHitbox>();
-            hitbox.debugLogs = debugLogs;
-            hitbox.arcDegrees = slash.arcDegrees;
-            hitbox.radius = slash.radius;
-            hitbox.Init(this, slash.active, slash.damage, playerMask, playerTag);
+            Vector3 spawnPos = GetGroundPointUnderBoss() + Vector3.up * 0.2f;
 
-            yield return new WaitForSeconds(slash.active + slash.recovery);
+            var hb = Instantiate(_slash.HitboxPrefab, spawnPos, rot);
+            var hitbox = hb.GetComponent<SlashHitbox>();
+
+            hitbox.Init(
+                this,
+                _slash.Active,
+                _slash.Damage,
+                _slash.Radius,
+                _slash.ArcDegrees,
+                _slash.Height,
+                _playerMask,
+                _playerTag
+            );
+
+            yield return new WaitForSeconds(_slash.Active + _slash.Recovery);
         }
 
-        state = BossState.Chasing;
-        agent.isStopped = false;
+        if (!_isDead && _agent.enabled)
+            _agent.isStopped = false;
     }
 
     IEnumerator ChargeRam()
     {
-        state = BossState.Attacking;
+        if (_isDead)
+            yield break;
 
-        agent.isStopped = true;
-        agent.updatePosition = false;
-        agent.updateRotation = false;
-        agent.enabled = false;
+        if (_agent.enabled)
+        {
+            _agent.isStopped = true;
+            _agent.updatePosition = false;
+            _agent.updateRotation = false;
+            _agent.enabled = false;
+        }
 
-        FaceTarget(player ? player.position : transform.position + transform.forward);
-        yield return new WaitForSeconds(charge.windup);
+        FaceTarget(_player ? _player.position : transform.position + transform.forward);
+        yield return new WaitForSeconds(_charge.Windup);
 
-        Vector3 toTarget = player ? (player.position - transform.position) : transform.forward;
+        Vector3 toTarget = _player ? (_player.position - transform.position) : transform.forward;
         toTarget.y = 0f;
         Vector3 dir = toTarget.sqrMagnitude > 0.001f ? toTarget.normalized : transform.forward;
 
@@ -482,25 +444,29 @@ public class BossController : MonoBehaviour
         HashSet<int> damagedThisCharge = new HashSet<int>();
 
         float t = 0f;
-        while (t < charge.duration)
+        while (t < _charge.Duration)
         {
+            if (_isDead)
+                break;
+
             t += Time.deltaTime;
 
-            Vector3 next = transform.position + dir * charge.speed * Time.deltaTime;
+            Vector3 next = transform.position + dir * _charge.Speed * Time.deltaTime;
 
-            Collider[] cols = Physics.OverlapSphere(next + Vector3.up * 1f, 1.2f, playerMask, QueryTriggerInteraction.Ignore);
+            Collider[] cols = Physics.OverlapSphere(next + Vector3.up * 1f, 1.2f, _playerMask, QueryTriggerInteraction.Ignore);
             foreach (var c in cols)
             {
                 if (c == null) continue;
+
                 GameObject root = c.attachedRigidbody ? c.attachedRigidbody.gameObject : c.transform.root.gameObject;
                 if (root == null) root = c.gameObject;
-                if (!root.CompareTag(playerTag) && !c.CompareTag(playerTag)) continue;
+                if (!root.CompareTag(_playerTag) && !c.CompareTag(_playerTag)) continue;
 
                 int id = root.GetInstanceID();
                 if (damagedThisCharge.Contains(id)) continue;
 
                 damagedThisCharge.Add(id);
-                TryDamagePlayerGO(root, charge.damage);
+                TryDamagePlayerGO(root, _charge.Damage);
             }
 
             transform.position = next;
@@ -510,65 +476,79 @@ public class BossController : MonoBehaviour
 
         if (trail) trail.emitting = false;
 
-        agent.enabled = true;
-        agent.updatePosition = true;
-        agent.updateRotation = !useManualRotation;
-        state = BossState.Chasing;
-        agent.isStopped = false;
-        agent.speed = chaseSpeed;
-        if (player != null)
+        if (_isDead)
+            yield break;
+
+        _agent.enabled = true;
+        _agent.updatePosition = true;
+        _agent.updateRotation = !_useManualRotation;
+        _agent.isStopped = false;
+        _agent.speed = _config.ChaseSpeed;
+
+        if (_player != null)
         {
-            Vector3 goal = player.position;
-            if (NavMesh.SamplePosition(goal, out var near, chaseSampleRadius, NavMesh.AllAreas))
-                agent.SetDestination(near.position);
+            Vector3 goal = _player.position;
+            if (NavMesh.SamplePosition(goal, out var near, _chaseSampleRadius, NavMesh.AllAreas))
+                _agent.SetDestination(near.position);
             else
-                agent.SetDestination(goal);
+                _agent.SetDestination(goal);
         }
     }
 
     IEnumerator SpawnTotemsPhase()
     {
-        state = BossState.Stunned;
-        agent.isStopped = true;
-        agent.velocity = Vector3.zero;
+        _isStunned = true;
 
-        activeTotems.Clear();
+        if (_agent.enabled)
+        {
+            _agent.isStopped = true;
+            _agent.velocity = Vector3.zero;
+        }
+
+        _activeTotems.Clear();
 
         for (int i = 0; i < 3; i++)
         {
             float ang = i * 120f * Mathf.Deg2Rad;
-            Vector3 ring = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * totems.ringRadius;
+            Vector3 ring = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * _totems.RingRadius;
             Vector3 targetXZ = transform.position + ring;
 
             Vector3 placed = targetXZ;
             if (TryRaycastGround(targetXZ, out Vector3 gp)) placed = gp;
             else if (NavMesh.SamplePosition(targetXZ, out var nh, 2f, NavMesh.AllAreas)) placed = nh.position;
+
             placed += Vector3.up * 0.01f;
 
-            var go = Instantiate(totems.prefab, placed, Quaternion.identity);
+            var go = Instantiate(_totems.Prefab, placed, Quaternion.identity);
             var totem = go.GetComponent<Totem>();
-            totem.debugLogs = debugLogs;
+            totem.DebugLogs = _debugLogs;
             totem.Init(this);
 
-            activeTotems.Add(totem);
+            _activeTotems.Add(totem);
             Log($"Тотем: {placed}");
         }
 
-        yield return new WaitForSeconds(totems.stunDurationOnSpawn);
+        yield return new WaitForSeconds(_totems.StunDurationOnSpawn);
 
-        state = BossState.Chasing;
-        agent.isStopped = false;
+        _isStunned = false;
+
+        if (!_isDead && _agent.enabled)
+            _agent.isStopped = false;
     }
 
     public void OnTotemDestroyed(Totem t)
     {
-        if (activeTotems.Contains(t)) activeTotems.Remove(t);
+        if (_activeTotems.Contains(t))
+            _activeTotems.Remove(t);
+
         Log("Тотем уничтожен.");
     }
 
     private void FaceTarget(Vector3 worldPos)
     {
-        Vector3 dir = (worldPos - transform.position); dir.y = 0f;
+        Vector3 dir = worldPos - transform.position;
+        dir.y = 0f;
+
         if (dir.sqrMagnitude > 0.001f)
         {
             Quaternion target = Quaternion.LookRotation(dir);
@@ -578,101 +558,126 @@ public class BossController : MonoBehaviour
 
     private static float PlanarDistance(Vector3 a, Vector3 b)
     {
-        a.y = 0f; b.y = 0f; return Vector3.Distance(a, b);
+        a.y = 0f;
+        b.y = 0f;
+        return Vector3.Distance(a, b);
     }
 
     private bool TryRaycastGround(Vector3 xz, out Vector3 hitPoint)
     {
-        Vector3 from = new Vector3(xz.x, ground.rayStartHeight, xz.z);
-        RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, ground.rayMaxDistance, ~0, QueryTriggerInteraction.Ignore);
+        Vector3 from = new Vector3(xz.x, _groundRayStartHeight, xz.z);
+        RaycastHit[] hits = Physics.RaycastAll(from, Vector3.down, _groundRayMaxDistance, ~0, QueryTriggerInteraction.Ignore);
         System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
 
         foreach (var h in hits)
         {
             if (h.collider == null) continue;
+
             Transform root = h.collider.transform.root;
             if (root == transform) continue;
+
             hitPoint = h.point;
             return true;
         }
 
-        hitPoint = new Vector3(xz.x, transform.position.y - centerToBottomOffsetY, xz.z);
+        hitPoint = new Vector3(xz.x, transform.position.y - _centerToBottomOffsetY, xz.z);
         return false;
     }
 
     private Vector3 GetGroundPointUnderBoss()
     {
         Vector3 xz = new Vector3(transform.position.x, 0f, transform.position.z);
-        if (TryRaycastGround(xz, out var p)) return p + Vector3.up * 0.01f;
-        return new Vector3(xz.x, transform.position.y - centerToBottomOffsetY + 0.01f, xz.z);
+        if (TryRaycastGround(xz, out var p))
+            return p + Vector3.up * 0.01f;
+
+        return new Vector3(xz.x, transform.position.y - _centerToBottomOffsetY + 0.01f, xz.z);
     }
 
     void EnsureWindupIndicator()
     {
-        if (windupBillboardGO != null) return;
+        if (_windupBillboardGO != null)
+            return;
 
         Shader unlit = Shader.Find("Universal Render Pipeline/Unlit");
         if (unlit == null) unlit = Shader.Find("Unlit/Color");
         if (unlit == null) unlit = Shader.Find("Sprites/Default");
 
-        windupBillboardMat = new Material(unlit);
-        windupBillboardMat.color = windup.billboardColor;
-        windupBillboardMat.renderQueue = 5000;
+        _windupBillboardMat = new Material(unlit);
+        _windupBillboardMat.color = _windupBillboardColor;
+        _windupBillboardMat.renderQueue = 5000;
 
-        windupBillboardGO = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        windupBillboardGO.name = "SlashWindup_Billboard";
-        windupBillboardGO.transform.SetParent(null);
-        var col = windupBillboardGO.GetComponent<Collider>();
+        _windupBillboardGO = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        _windupBillboardGO.name = "SlashWindup_Billboard";
+        _windupBillboardGO.transform.SetParent(null);
+
+        var col = _windupBillboardGO.GetComponent<Collider>();
         if (col) Destroy(col);
 
-        var mr = windupBillboardGO.GetComponent<MeshRenderer>();
-        if (mr) mr.sharedMaterial = windupBillboardMat;
+        var mr = _windupBillboardGO.GetComponent<MeshRenderer>();
+        if (mr) mr.sharedMaterial = _windupBillboardMat;
 
-        windupBillboardGO.SetActive(false);
+        _windupBillboardGO.SetActive(false);
     }
 
     void EnableWindupIndicator(bool on)
     {
         EnsureWindupIndicator();
-        windupOn = on;
-        windupLocalTime = 0f;
-        windupBillboardGO.SetActive(on);
+
+        _windupOn = on;
+        _windupLocalTime = 0f;
+        _windupBillboardGO.SetActive(on);
 
         if (on)
         {
-            Vector3 basePos = bossCol.bounds.max + Vector3.up * windup.billboardHeight;
-            windupBillboardGO.transform.position = basePos;
-            windupBillboardGO.transform.localScale = Vector3.one * windup.billboardSize;
+            Vector3 basePos = _bossCol.bounds.max + Vector3.up * _windupBillboardHeight;
+            _windupBillboardGO.transform.position = basePos;
+            _windupBillboardGO.transform.localScale = Vector3.one * _windupBillboardSize;
 
             var cam = Camera.main;
             if (cam)
-                windupBillboardGO.transform.rotation = Quaternion.LookRotation(cam.transform.forward, Vector3.up);
+                _windupBillboardGO.transform.rotation = Quaternion.LookRotation(cam.transform.forward, Vector3.up);
         }
     }
 
     public void TakeDamage(float amount)
     {
-        if (state == BossState.Dead) return;
-        currentHealth = Mathf.Max(0f, currentHealth - amount);
-        Log($"Получен урон: -{amount} (HP {currentHealth}/{maxHealth})");
+        if (_isDead)
+            return;
+
+        _currentHealth = Mathf.Max(0f, _currentHealth - amount);
+        Log($"Получен урон: -{amount} (HP {_currentHealth}/{_config.MaxHealth})");
     }
 
     public void TryDamageFoundPlayers(float dmg)
     {
-        Collider[] cols = Physics.OverlapSphere(transform.position, 2.0f, playerMask);
-        foreach (var c in cols) TryDamagePlayerGO(c.gameObject, dmg);
+        Collider[] cols = Physics.OverlapSphere(transform.position, 2.0f, _playerMask);
+        foreach (var c in cols)
+            TryDamagePlayerGO(c.gameObject, dmg);
     }
 
     public void TryDamagePlayerGO(GameObject target, float dmg)
     {
-        if (target == null) return;
-        if (!string.IsNullOrEmpty(playerTag) && !target.CompareTag(playerTag)) return;
+        if (target == null)
+            return;
+
+        if (!string.IsNullOrEmpty(_playerTag) && !target.CompareTag(_playerTag))
+            return;
+
         target.SendMessage("TakeDamage", dmg, SendMessageOptions.DontRequireReceiver);
     }
 
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.cyan; Gizmos.DrawWireSphere(transform.position, aggroRadius);
-        Gizmos.color = Color.yellow; Gizmos.DrawWireSphere(transform.position, totems.ringRadius);
+        if (_config == null)
+            return;
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, _config.AggroRadius);
+
+        if (_totems != null)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(transform.position, _totems.RingRadius);
+        }
     }
 }

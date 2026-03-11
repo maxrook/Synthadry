@@ -2,38 +2,38 @@ using UnityEngine;
 
 public class Totem : MonoBehaviour
 {
-    public bool debugLogs = true;
-    void Log(string m){ if(debugLogs) Debug.Log($"[BOSS:TOTEM] {m}"); }
+    public bool DebugLogs = false;
+    void Log(string m) { if (DebugLogs) Debug.Log($"[BOSS:TOTEM] {m}"); }
 
-    public float maxHealth = 120f;
-    public float currentHealth;
+    public float MaxHealth = 120f;
+    public float CurrentHealth;
     public bool IsDead { get; private set; }
 
-    public string[] damageTags = new string[] { "PlayerProjectile", "Bullet" };
+    public string[] DamageTags = new string[] { "PlayerProjectile", "Bullet" };
 
-    private BossController owner;
+    private BossController _owner;
 
     void Awake()
     {
-        currentHealth = maxHealth;
+        CurrentHealth = MaxHealth;
         Log("Spawn");
     }
 
     public void Init(BossController owner)
     {
-        this.owner = owner;
+        _owner = owner;
     }
 
     public void ApplyExternalDamage(float dmg)
     {
         if (IsDead) return;
-        currentHealth -= dmg;
-        Log($"Damage {dmg}, HP {currentHealth}/{maxHealth}");
-        if (currentHealth <= 0f)
+        CurrentHealth -= dmg;
+        Log($"Damage {dmg}, HP {CurrentHealth}/{MaxHealth}");
+        if (CurrentHealth <= 0f)
         {
             IsDead = true;
-            currentHealth = 0f;
-            if (owner != null) owner.OnTotemDestroyed(this);
+            CurrentHealth = 0f;
+            if (_owner != null) _owner.OnTotemDestroyed(this);
             Log("Destroyed");
             Destroy(gameObject);
         }
@@ -41,13 +41,13 @@ public class Totem : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        foreach (var t in damageTags)
+        foreach (var t in DamageTags)
         {
             if (other.CompareTag(t))
             {
                 float dmg = 25f;
                 var info = other.GetComponent<ComponentWithDamage>();
-                if (info != null) dmg = info.damage;
+                if (info != null) dmg = info.Damage;
 
                 ApplyExternalDamage(dmg);
 
@@ -60,5 +60,5 @@ public class Totem : MonoBehaviour
 
 public class ComponentWithDamage : MonoBehaviour
 {
-    public float damage = 25f;
+    public float Damage = 25f;
 }

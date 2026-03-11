@@ -1,99 +1,64 @@
-using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class MobController : MonoBehaviour, IPauseHandler
 {
-    public enum MobState
-    {
-        Patrol,
-        Run,
-        Attack,
-        Dead
-    }
-    [Header("Текущее состояние моба")]
-    public MobState state;
+    [Header("Конфиг моба")]
+    [SerializeField] private MobSettingsSO _settings;
 
     [Header("Включить отладку (Debug.Log)")]
-    [SerializeField] private bool log = false;
+    [SerializeField] private bool _log = false;
 
-    [Header("Путь патрулирования (точки)")]
-    public Vector3[] waypoints = new Vector3[2];
+    private float _playerHealth;
+    private int _nextWaypoint = 0;
 
-    [Header("Скорость патруля")]
-    public int patrolSpeed = 5;
+    private float _timer;
+    private float _attackTimer = 0f;
+    private float _distanceToPlayer;
+    private float _angle;
+    private float _currentSpeed;
+    private Vector3 _targetPosition;
+    private Vector3 _lastPlayerPosition = Vector3.zero;
 
-    [Header("Скорость бега за игроком")]
-    public int runSpeed = 8;
+    private float _health;
 
-    [Header("Радиус обзора")]
-    public float viewRadius = 10f;
+    private NavMeshAgent _enemy;
+    private GameObject _player;
+    private PlayerHealth _playerComponent;
+    private Animator _animator;
 
-    [Header("Радиус атаки")]
-    public float attackRadius = 2f;
+    private bool _isIdle = false;
+    private bool _isHurt = false;
+    private bool _isDead = false;
+    private Coroutine _hurtCoroutine;
 
-    [Header("Урон моба за одну атаку")]
-    public float damage = 10f;
+    private const int AnimPatrol = 0;
+    private const int AnimRun = 1;
+    private const int AnimAttack = 2;
+    private const int AnimIdle = 4;
+    private const int AnimHurt = 5;
 
-    [Header("Здоровье моба")]
-    public float health = 100f;
-
-    [Header("Интервал между атаками (сек)")]
-    public float attackInterval = 1f;
-
-    [Header("Длительность остановки при патруле (сек)")]
-    public float stopDuration = 3f;
-
-    [Header("Время до остановки при патруле (сек)")]
-    public float timeUntilStop = 15f;
-
-    [Header("Время до исчезновения после смерти (сек)")]
-    public float timeUntilDisappearance = 10f;
-
-    [Header("Угол обзора (в градусах)")]
-    public float viewAngle = 80f;
-
-    [SerializeField] private float hurtDuration = 0.35f;
-
-    private float playerHealth;
-    private int nextWaypoint = 0;
-
-    private float timer, attackTimer = 0f;
-    private float distanceToPlayer;
-    private float angle;
-    private float currentSpeed;
-    private Vector3 targetPosition, lastPlayerPosition = Vector3.zero;
-    // private Material material;
-
-    private NavMeshAgent Enemy;
-    private GameObject Player;
-    private PlayerHealth playerComponent;
-    private Animator animator;
-    private int currentAnimState = -1;
-
-    private bool isIdle = false;
-    public Action<MobState> StateChanged;
-
-    private bool isHurt = false;
-    private Coroutine hurtCoroutine;
-
-    void Start()
+    private void Log(string msg)
     {
-        Enemy = GetComponent<NavMeshAgent>();
+        if (_log)
+            Debug.Log($"[MOB] {msg}");
+    }
 
-        Enemy.updateRotation = true;
-        Enemy.angularSpeed = 1440f;
-        Enemy.acceleration = 60f;
-        Enemy.autoBraking = true;
+    private bool ValidateSettings()
+    {
+        if (_settings == null)
+        {
+            Debug.LogError("[MOB] MobSettingsSO не назначен", this);
+            return false;
+        }
 
-        Player = GameObject.FindGameObjectWithTag("Player");
-        playerComponent = Player.GetComponent<PlayerHealth>();
+        return true;
+    }
 
-        timer = timeUntilStop;
-        currentSpeed = patrolSpeed;
-        state = MobState.Patrol;
-        animator = GetComponent<Animator>();
+    private Vector3 GetWaypointWorld(int index)
+    {
+        return _settings.Waypoints[index];
     }
 
     void Awake()
@@ -106,192 +71,324 @@ public class MobController : MonoBehaviour, IPauseHandler
         {
             PauseManager.OnPauseManagerReady += OnPauseReady;
         }
+
+        if (_settings != null)
+            _health = _settings.MaxHealth;
+    }
+
+    void Start()
+    {
+        if (!ValidateSettings())
+        {
+            enabled = false;
+            return;
+        }
+
+        _enemy = GetComponent<NavMeshAgent>();
+
+        _enemy.updateRotation = true;
+        _enemy.angularSpeed = 1440f;
+        _enemy.acceleration = 60f;
+        _enemy.autoBraking = true;
+
+        _player = GameObject.FindGameObjectWithTag("Player");
+        if (_player != null)
+            _playerComponent = _player.GetComponent<PlayerHealth>();
+
+        _timer = _settings.TimeUntilStop;
+        _currentSpeed = _settings.PatrolSpeed;
+        _animator = GetComponent<Animator>();
+
+        if (_health <= 0f)
+            _health = _settings.MaxHealth;
     }
 
     private void OnPauseReady()
     {
         PauseManager.Instance.Register(this);
-        PauseManager.OnPauseManagerReady -= OnPauseReady; // ������������
+        PauseManager.OnPauseManagerReady -= OnPauseReady;
     }
 
     void OnDestroy()
     {
-        PauseManager.Instance.UnRegister(this);
+        if (PauseManager.Instance != null)
+            PauseManager.Instance.UnRegister(this);
+
         PauseManager.OnPauseManagerReady -= OnPauseReady;
     }
 
     void Update()
     {
-        Vector3 directionToPlayer = (Player.transform.position - transform.position).normalized;
-        angle = Vector3.Angle(transform.forward, directionToPlayer);
-
-        distanceToPlayer = Vector3.Distance(Enemy.transform.position, Player.transform.position);
-        Enemy.speed = currentSpeed;
-        playerHealth = playerComponent.GetHealth();
-
-        if (health <= 0f)
-            state = MobState.Dead;
-
-        switch (state)
+        if (_isDead)
         {
-            case MobState.Patrol:
-                Patrol();
-                break;
-            case MobState.Run:
-                Run();
-                break;
-            case MobState.Attack:
+            UpdateAnimation();
+            return;
+        }
+
+        if (_player == null || _playerComponent == null)
+        {
+            UpdateAnimation();
+            return;
+        }
+
+        Vector3 directionToPlayer = (_player.transform.position - transform.position).normalized;
+        _angle = Vector3.Angle(transform.forward, directionToPlayer);
+
+        _distanceToPlayer = Vector3.Distance(transform.position, _player.transform.position);
+        _playerHealth = _playerComponent.GetHealth();
+
+        if (_health <= 0f)
+        {
+            Die();
+            return;
+        }
+
+        if (!_isHurt)
+        {
+            if (_playerHealth > 0f && _distanceToPlayer <= _settings.AttackRadius + 0.6f)
+            {
                 Attack();
-                break;
-            case MobState.Dead:
-                Die();
-                break;
-            default:
-                break;
+            }
+            else if (ShouldRun())
+            {
+                Run();
+            }
+            else
+            {
+                Patrol();
+            }
         }
 
-        if (log) Debug.Log(state);
-        currentAnimState = (int)state;
+        _enemy.speed = _currentSpeed;
 
-        if (isDead)
+        UpdateAnimation();
+    }
+
+    private bool ShouldRun()
+    {
+        bool seesPlayer =
+            _distanceToPlayer <= _settings.ViewRadius &&
+            _angle <= _settings.ViewAngle * 0.5f &&
+            _playerHealth > 0f &&
+            CanSeePlayer();
+
+        if (seesPlayer)
         {
-            animator.SetInteger("state", 4);
-        }
-        else if (isHurt)
-        {
-            animator.SetInteger("state", 5);
-        }
-        else if (!isIdle)
-        {
-            animator.SetInteger("state", currentAnimState);
-        }
-        else
-        {
-            animator.SetInteger("state", 4);
+            _lastPlayerPosition = _player.transform.position;
+            return true;
         }
 
-        if (log) Debug.Log("State changed to: " + currentAnimState);
-        // RotateToMoveDirection();
+        if (_lastPlayerPosition != Vector3.zero)
+            return true;
 
+        return false;
     }
 
     bool CanSeePlayer()
     {
         Vector3 origin = transform.position;
-        Vector3 direction = (Player.transform.position - origin).normalized;
+        Vector3 direction = (_player.transform.position - origin).normalized;
         RaycastHit hit;
 
-
-        if (Physics.Raycast(origin, direction, out hit, viewRadius))
+        if (Physics.Raycast(origin, direction, out hit, _settings.ViewRadius))
         {
-            if (hit.transform.gameObject == Player || hit.transform.root.gameObject == Player)
-            {
+            if (hit.transform.gameObject == _player || hit.transform.root.gameObject == _player)
                 return true;
-            }
-
         }
+
         return false;
     }
 
     void Patrol()
     {
-        if (lastPlayerPosition == Vector3.zero)
-            timer -= Time.deltaTime;
+        _currentSpeed = _settings.PatrolSpeed;
 
+        if (_lastPlayerPosition == Vector3.zero)
+            _timer -= Time.deltaTime;
 
-        if (distanceToPlayer <= viewRadius && angle <= viewAngle && playerHealth > 0f && CanSeePlayer())
+        if (_timer <= 0f)
         {
-            Enemy.isStopped = false;
-            state = MobState.Run;
-        }
-        else if (timer <= 0f)
-        {
-            if (Enemy.isStopped)
+            if (_enemy.isStopped)
             {
-                isIdle = false;
-                Enemy.isStopped = false;
-                timer = timeUntilStop;
+                _isIdle = false;
+                _enemy.isStopped = false;
+                _timer = _settings.TimeUntilStop;
             }
             else
             {
-                isIdle = true;
-                Enemy.isStopped = true;
-                timer = stopDuration;
+                _isIdle = true;
+                _enemy.isStopped = true;
+                _timer = _settings.StopDuration;
             }
-        }
-        else if (Vector3.Distance(Enemy.transform.position, targetPosition) <= 1f || !Enemy.hasPath)
-        {
-            lastPlayerPosition = Vector3.zero;
-            currentSpeed = patrolSpeed;
-            targetPosition = waypoints[nextWaypoint];
-            nextWaypoint = nextWaypoint + 1 >= waypoints.Length ? 0 : nextWaypoint + 1;
 
-            Enemy.SetDestination(targetPosition);
+            return;
+        }
+
+        if (Vector3.Distance(_enemy.transform.position, _targetPosition) <= 1f || !_enemy.hasPath)
+        {
+            _lastPlayerPosition = Vector3.zero;
+
+            if (_settings.Waypoints == null || _settings.Waypoints.Length == 0)
+            {
+                _isIdle = true;
+                _enemy.isStopped = true;
+                return;
+            }
+
+            _targetPosition = GetWaypointWorld(_nextWaypoint);
+            _nextWaypoint = _nextWaypoint + 1 >= _settings.Waypoints.Length ? 0 : _nextWaypoint + 1;
+
+            _isIdle = false;
+            _enemy.isStopped = false;
+            _enemy.SetDestination(_targetPosition);
         }
     }
 
     void Run()
     {
-        currentSpeed = runSpeed;
+        _currentSpeed = _settings.RunSpeed;
+        _isIdle = false;
+        _enemy.isStopped = false;
 
-        if (distanceToPlayer > viewRadius)
-            state = MobState.Patrol;
-        else if (distanceToPlayer > attackRadius)
+        bool canTrackPlayerNow =
+            _distanceToPlayer <= _settings.ViewRadius &&
+            _playerHealth > 0f;
+
+        if (canTrackPlayerNow)
+            _lastPlayerPosition = _player.transform.position;
+
+        if (_distanceToPlayer <= _settings.AttackRadius && _playerHealth > 0f)
         {
-            lastPlayerPosition = Player.transform.position;
-            Enemy.SetDestination(lastPlayerPosition);
+            _enemy.ResetPath();
+            Attack();
+            return;
+        }
+
+        if (_lastPlayerPosition != Vector3.zero)
+        {
+            _enemy.SetDestination(_lastPlayerPosition);
+
+            if (Vector3.Distance(_enemy.transform.position, _lastPlayerPosition) <= 1f)
+            {
+                _lastPlayerPosition = Vector3.zero;
+                _currentSpeed = _settings.PatrolSpeed;
+            }
         }
         else
         {
-            Enemy.ResetPath();
-            state = MobState.Attack;
+            _currentSpeed = _settings.PatrolSpeed;
+            Patrol();
         }
-
     }
 
     void Attack()
     {
-        if (playerHealth <= 0f)
+        _enemy.isStopped = true;
+        _enemy.ResetPath();
+        _isIdle = false;
+
+        if (_playerHealth <= 0f)
         {
-            state = MobState.Patrol;
+            _currentSpeed = _settings.PatrolSpeed;
+            _lastPlayerPosition = Vector3.zero;
+            return;
         }
-        else if (distanceToPlayer > attackRadius)
+
+        if (_distanceToPlayer > _settings.AttackRadius + 0.6f)
         {
-            state = MobState.Run;
+            _enemy.isStopped = false;
+            _currentSpeed = _settings.RunSpeed;
+            Run();
+            return;
+        }
+
+        _attackTimer -= Time.deltaTime;
+        if (_attackTimer <= 0f)
+        {
+            _attackTimer = _settings.AttackInterval;
+            _playerComponent.TakeDamage(_settings.Damage);
+        }
+    }
+    private void UpdateAnimation()
+    {
+        if (_animator == null)
+            return;
+
+        if (_isDead)
+        {
+            _animator.SetInteger("state", AnimIdle);
+        }
+        else if (_isHurt)
+        {
+            _animator.SetInteger("state", AnimHurt);
+        }
+        else if (_playerHealth > 0f && _distanceToPlayer <= _settings.AttackRadius + 0.6f)
+        {
+            _animator.SetInteger("state", AnimAttack);
+        }
+        else if (ShouldRun())
+        {
+            _animator.SetInteger("state", AnimRun);
+        }
+        else if (_enemy != null && _enemy.isStopped)
+        {
+            _animator.SetInteger("state", AnimIdle);
         }
         else
         {
-            attackTimer -= Time.deltaTime;
-            if (attackTimer <= 0f)
-            {
-                attackTimer = attackInterval;
-                playerComponent.TakeDamage(damage);
-            }
+            _animator.SetInteger("state", AnimPatrol);
         }
     }
+
     void OnDrawGizmosSelected()
     {
+        if (_settings == null)
+            return;
+
         Vector3 forward = transform.forward;
-        Vector3 leftLimit = Quaternion.Euler(0, -viewAngle / 2, 0) * forward;
-        Vector3 rightLimit = Quaternion.Euler(0, viewAngle / 2, 0) * forward;
+        Vector3 leftLimit = Quaternion.Euler(0, -_settings.ViewAngle / 2, 0) * forward;
+        Vector3 rightLimit = Quaternion.Euler(0, _settings.ViewAngle / 2, 0) * forward;
 
         Gizmos.color = Color.blue;
-        Gizmos.DrawLine(transform.position, transform.position + leftLimit * viewRadius);
-        Gizmos.DrawLine(transform.position, transform.position + rightLimit * viewRadius);
+        Gizmos.DrawLine(transform.position, transform.position + leftLimit * _settings.ViewRadius);
+        Gizmos.DrawLine(transform.position, transform.position + rightLimit * _settings.ViewRadius);
 
-        if (Player != null)
+        if (_player != null)
         {
             Vector3 origin = transform.position;
-            Vector3 direction = (Player.transform.position - origin).normalized;
+            Vector3 direction = (_player.transform.position - origin).normalized;
             Gizmos.color = Color.yellow;
-            Gizmos.DrawLine(origin, origin + direction * viewRadius);
+            Gizmos.DrawLine(origin, origin + direction * _settings.ViewRadius);
+        }
+
+        if (_settings.Waypoints != null && _settings.Waypoints.Length > 0)
+        {
+            Gizmos.color = Color.green;
+            for (int i = 0; i < _settings.Waypoints.Length; i++)
+            {
+                Vector3 wp = transform.parent != null
+                    ? transform.parent.TransformPoint(_settings.Waypoints[i])
+                    : transform.TransformPoint(_settings.Waypoints[i]);
+
+                Gizmos.DrawSphere(wp, 0.2f);
+
+                int next = i + 1 >= _settings.Waypoints.Length ? 0 : i + 1;
+                Vector3 nextWp = transform.parent != null
+                    ? transform.parent.TransformPoint(_settings.Waypoints[next])
+                    : transform.TransformPoint(_settings.Waypoints[next]);
+
+                if (_settings.Waypoints.Length > 1)
+                    Gizmos.DrawLine(wp, nextWp);
+            }
         }
     }
 
     public void TakeDamage(float amount)
     {
-        health -= amount;
-        if (health <= 0f)
+        if (_isDead) return;
+
+        _health -= amount;
+        if (_health <= 0f)
         {
             Die();
         }
@@ -303,91 +400,86 @@ public class MobController : MonoBehaviour, IPauseHandler
 
     private void StartHurt()
     {
-        if (isDead) return;
+        if (_isDead) return;
 
-        if (hurtCoroutine != null)
-            StopCoroutine(hurtCoroutine);
+        if (_hurtCoroutine != null)
+            StopCoroutine(_hurtCoroutine);
 
-        bool prevIdle = isIdle;
-        bool prevStopped = Enemy.isStopped;
+        bool prevIdle = _isIdle;
+        bool prevStopped = _enemy.isStopped;
 
-        isHurt = true;
-        isIdle = false;
+        _isHurt = true;
+        _isIdle = false;
 
-        Enemy.isStopped = true;
-        Enemy.ResetPath();
+        _enemy.isStopped = true;
+        _enemy.ResetPath();
 
-        hurtCoroutine = StartCoroutine(HurtRoutine(prevIdle, prevStopped));
+        _hurtCoroutine = StartCoroutine(HurtRoutine(prevIdle, prevStopped));
     }
 
     private IEnumerator HurtRoutine(bool prevIdle, bool prevStopped)
     {
-        yield return new WaitForSeconds(hurtDuration);
+        yield return new WaitForSeconds(_settings.HurtDuration);
 
-        isHurt = false;
-        hurtCoroutine = null;
+        _isHurt = false;
+        _hurtCoroutine = null;
 
-        if (isDead || health <= 0f) yield break;
+        if (_isDead || _health <= 0f) yield break;
 
-        isIdle = prevIdle;
-        Enemy.isStopped = prevStopped;
+        _isIdle = prevIdle;
+        _enemy.isStopped = prevStopped;
     }
-
-    private bool isDead = false;
 
     [ContextMenu("die")]
     private void Die()
     {
-        if (isDead) return;
-        isDead = true;
+        if (_isDead) return;
+        _isDead = true;
 
-        if (hurtCoroutine != null)
+        if (_hurtCoroutine != null)
         {
-            StopCoroutine(hurtCoroutine);
-            hurtCoroutine = null;
+            StopCoroutine(_hurtCoroutine);
+            _hurtCoroutine = null;
         }
-        isHurt = false;
 
-        health = 0f;
-        state = MobState.Dead;
+        _isHurt = false;
+        _health = 0f;
 
-        Enemy.isStopped = true;
-        Enemy.ResetPath();
+        _enemy.isStopped = true;
+        _enemy.ResetPath();
 
-        isIdle = true;
-        animator.enabled = true;
-        animator.speed = 1f;
-        animator.SetInteger("state", 4);
-        animator.Update(0f);
+        _isIdle = true;
 
+        if (_animator != null)
+        {
+            _animator.enabled = true;
+            _animator.speed = 1f;
+            _animator.SetInteger("state", AnimIdle);
+            _animator.Update(0f);
+        }
 
         StartCoroutine(DyingRoutine());
     }
 
     private IEnumerator DyingRoutine()
     {
-        yield return new WaitForSeconds(timeUntilDisappearance);
-        Destroy(gameObject);
-    }
-
-    private IEnumerator Diyng(float time)
-    {
-        yield return new WaitForSeconds(time);
+        yield return new WaitForSeconds(_settings.TimeUntilDisappearance);
         Destroy(gameObject);
     }
 
     public float GetHealth()
     {
-        return health;
+        return _health;
     }
 
     public void SetPaused(bool isPaused)
     {
-        Enemy.isStopped = isPaused;
-        enabled = !isPaused; 
-        if (isPaused)
-            animator.speed = 0f;
-        else
-            animator.speed = 1f;
+        if (_enemy != null)
+            _enemy.isStopped = isPaused;
+
+        enabled = !isPaused;
+
+        if (_animator != null)
+            _animator.speed = isPaused ? 0f : 1f;
     }
 }

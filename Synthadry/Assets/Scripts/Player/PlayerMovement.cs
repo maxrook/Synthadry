@@ -1,17 +1,14 @@
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour, IPauseHandler
+public class PlayerMovement : MonoBehaviour
 {
-
-    public Camera firstPersonCamera;
-
     [Header("Movement Settings")]
     public float moveSpeed = 8.0f;
     public float runSpeedMultiplier = 1.5f;
     public float gravity = 20.0f;
     public float jumpHeight = 5.0f;
     public float airControl = 0.3f;
-    public float friction = 6.0f;
+    public float friction = 6.0f; 
     public float stopSpeed = 100.0f;
     public float airMoveSpeedMultiplier = 0.8f;
     [Header("Rotation Settings")]
@@ -21,21 +18,23 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
     public float maxAngleY = 60.0f;
 
     [Header("Falling Settings")]
-    public float maxFallSpeed = 30.0f;
-    public float earlyFallMultiplier = 2f;
-    public float lateFallMultiplier = 1.2f;
-    public float fallSpeedThreshold = 5f;
+    public float maxFallSpeed = 30.0f; 
+    public float earlyFallMultiplier = 2f; 
+    public float lateFallMultiplier = 1.2f; 
+    public float fallSpeedThreshold = 5f;  
 
     private CharacterController _characterController;
     private float _rotationY = 0.0f;
     private Vector3 _moveDirection = Vector3.zero;
     private bool _isGrounded = false;
-    private float _currentSpeed;
-    private float _timeSinceLastGrounded;
+    private float _currentSpeed; 
+    private float _timeSinceLastGrounded;  
 
-    private Vector3 _lastMovementInput;
+    private Vector3 _lastMovementInput; 
 
-    private bool _isJumping = false;
+    private bool _isJumping = false; 
+
+    public Camera firstPersonCamera;
 
     void Start()
     {
@@ -54,47 +53,21 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
             enabled = false;
             return;
         }
-    }
 
-    void Awake()
-    {
-        if (PauseManager.Instance != null)
-        {
-            PauseManager.Instance.Register(this);
-        }
-        else
-        {
-            PauseManager.OnPauseManagerReady += OnPauseReady;
-        }
-    }
-
-    private void OnPauseReady()
-    {
-        PauseManager.Instance.Register(this);
-        PauseManager.OnPauseManagerReady -= OnPauseReady; // Отписываемся
-    }
-
-    void OnDestroy()
-    {
-        PauseManager.Instance.UnRegister(this);
-        PauseManager.OnPauseManagerReady -= OnPauseReady;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 
     void Update()
     {
-        if (Input.GetButtonDown("Pause"))
-        {
-            Pause();
-        }
-
         HandleRotation();
 
         _isGrounded = _characterController.isGrounded;
 
         if (_isGrounded)
         {
-            _timeSinceLastGrounded = 0;
-            _isJumping = false;
+            _timeSinceLastGrounded = 0;  
+            _isJumping = false; 
 
             HandleGroundedMovement();
 
@@ -105,7 +78,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
         }
         else
         {
-            _timeSinceLastGrounded += Time.deltaTime;
+            _timeSinceLastGrounded += Time.deltaTime; 
 
 
             HandleAirMovement();
@@ -115,17 +88,17 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
 
         float gravityMultiplier = 1f;
 
-        if (_moveDirection.y < 0 && _timeSinceLastGrounded < 0.1f)
+        if (_moveDirection.y < 0 && _timeSinceLastGrounded < 0.1f) 
         {
             gravityMultiplier = earlyFallMultiplier;
         }
-        else if (_moveDirection.y < -fallSpeedThreshold)
+        else if (_moveDirection.y < -fallSpeedThreshold)  
         {
             gravityMultiplier = lateFallMultiplier;
         }
 
         _moveDirection.y -= gravity * gravityMultiplier * Time.deltaTime;
-        _moveDirection.y = Mathf.Max(_moveDirection.y, -maxFallSpeed);
+        _moveDirection.y = Mathf.Max(_moveDirection.y, -maxFallSpeed);  
         _characterController.Move(_moveDirection * Time.deltaTime);
 
         if (_isGrounded)
@@ -152,7 +125,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
         _rotationY = Mathf.Clamp(_rotationY, minAngleY, maxAngleY);
 
         transform.localEulerAngles = new Vector3(0, rotationX, 0);
-        firstPersonCamera.transform.localEulerAngles = new Vector3(-_rotationY, 0, 0);
+        Camera.main.transform.localEulerAngles = new Vector3(-_rotationY, 0, 0);
     }
     void HandleGroundedMovement()
     {
@@ -162,7 +135,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
         Vector3 move = transform.forward * z + transform.right * x;
         move.Normalize();
 
-        _lastMovementInput = move;
+        _lastMovementInput = move; 
 
         _currentSpeed = moveSpeed;
         if (Input.GetKey(KeyCode.LeftShift))
@@ -192,7 +165,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
 
         if (wishDir.magnitude > 0)
         {
-            wishDir.Normalize();
+            wishDir.Normalize(); 
         }
 
         float wishSpeed = moveSpeed * airControl * airMoveSpeedMultiplier;
@@ -216,17 +189,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
         _moveDirection.x = horizontalVelocity.x;
         _moveDirection.z = horizontalVelocity.y;
 
-        _isJumping = true;
-    }
-
-    void Pause()
-    {
-        PauseManager.Instance.SetPaused(true);
-    }
-
-    public void SetPaused(bool isPaused)
-    {
-        enabled = !isPaused; // Остановка Update, если пауза = true, то enabled должен быть равен = false
+        _isJumping = true; 
     }
 
     void ApplyFriction()
@@ -245,4 +208,3 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
         }
     }
 }
-

@@ -8,7 +8,7 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!gameObject.CompareTag("Player"))
         {
-            // Debug.LogError("������� ������ ������ ����� ��� 'Player'!");
+            Debug.LogError("������� ������ ������ ����� ��� 'Player'!");
         }
     }
     public void TakeDamage(float amount)
@@ -16,7 +16,7 @@ public class PlayerHealth : MonoBehaviour
         health -= amount;
         health = Mathf.Clamp(health, 0f, 100f); 
 
-        // Debug.Log("������� ����: " + amount + ", ������� ��������: " + health);
+        Debug.Log("������� ����: " + amount + ", ������� ��������: " + health);
         if (health <= 0f)
         {
             Die();
@@ -30,8 +30,7 @@ public class PlayerHealth : MonoBehaviour
 
     private void Die()
     {
-        // Debug.Log("����� ����!");
+        Debug.Log("����� ����!");
         gameObject.SetActive(false);
-        ScenesManager.Instance.ChangeScene("MainMenu");
     }
 }

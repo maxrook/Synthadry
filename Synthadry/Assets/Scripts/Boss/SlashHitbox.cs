@@ -3,36 +3,46 @@ using UnityEngine;
 
 public class SlashHitbox : MonoBehaviour
 {
-    public bool debugLogs = true;
-    void Log(string m){ if(debugLogs) Debug.Log($"[BOSS:SLASH] {m}"); }
+    public bool DebugLogs = false;
+    void Log(string m) { if (DebugLogs) Debug.Log($"[BOSS:SLASH] {m}"); }
 
-    public float radius = 4.5f;
-    public float arcDegrees = 100f;
-    public float height = 1.2f;
+    private float _radius;
+    private float _arcDegrees;
+    private float _height;
 
-    private BossController owner;
-    private float life;
-    private float damage;
-    private LayerMask playerMask;
-    private string playerTag;
-    private float t;
+    private BossController _owner;
+    private float _life;
+    private float _damage;
+    private LayerMask _playerMask;
+    private string _playerTag;
+    private float _t;
 
-    private readonly HashSet<int> damagedTargets = new HashSet<int>();
+    private readonly HashSet<int> _damagedTargets = new HashSet<int>();
 
-    LineRenderer lrArc;
-    LineRenderer lrGuide;
-    GameObject tip;
+    LineRenderer _lrArc;
+    LineRenderer _lrGuide;
+    GameObject _tip;
 
     const int SEGMENTS = 36;
 
-    public void Init(BossController owner, float activeTime, float damage,
-                     LayerMask playerMask, string playerTag)
+    public void Init(
+        BossController owner,
+        float activeTime,
+        float damage,
+        float radius,
+        float arcDegrees,
+        float height,
+        LayerMask playerMask,
+        string playerTag)
     {
-        this.owner = owner; 
-        this.life = activeTime; 
-        this.damage = damage;
-        this.playerMask = playerMask; 
-        this.playerTag = playerTag;
+        _owner = owner;
+        _life = activeTime;
+        _damage = damage;
+        _radius = radius;
+        _arcDegrees = arcDegrees;
+        _height = height;
+        _playerMask = playerMask;
+        _playerTag = playerTag;
 
         SetupVisuals();
         Log($"Spawn (active={activeTime:0.00}s, dmg={damage})");
@@ -40,85 +50,90 @@ public class SlashHitbox : MonoBehaviour
 
     void SetupVisuals()
     {
-        lrArc = gameObject.AddComponent<LineRenderer>();
-        lrArc.positionCount = SEGMENTS + 1;
-        lrArc.loop = false;
-        lrArc.useWorldSpace = true;
-        lrArc.widthMultiplier = 0.08f;
-        lrArc.material = new Material(Shader.Find("Sprites/Default"));
-        lrArc.startColor = lrArc.endColor = new Color(1f, 0.4f, 0.2f, 0.9f);
+        _lrArc = gameObject.AddComponent<LineRenderer>();
+        _lrArc.positionCount = SEGMENTS + 1;
+        _lrArc.loop = false;
+        _lrArc.useWorldSpace = true;
+        _lrArc.widthMultiplier = 0.08f;
+        _lrArc.material = new Material(Shader.Find("Sprites/Default"));
+        _lrArc.startColor = _lrArc.endColor = new Color(1f, 0.4f, 0.2f, 0.9f);
 
-        lrGuide = new GameObject("SlashGuide").AddComponent<LineRenderer>();
-        lrGuide.transform.SetParent(transform, worldPositionStays:false);
-        lrGuide.positionCount = 2;
-        lrGuide.useWorldSpace = true;
-        lrGuide.widthMultiplier = 0.06f;
-        lrGuide.material = new Material(Shader.Find("Sprites/Default"));
-        lrGuide.startColor = lrGuide.endColor = new Color(1f, 0.9f, 0.2f, 0.95f);
+        _lrGuide = new GameObject("SlashGuide").AddComponent<LineRenderer>();
+        _lrGuide.transform.SetParent(transform, worldPositionStays: false);
+        _lrGuide.positionCount = 2;
+        _lrGuide.useWorldSpace = true;
+        _lrGuide.widthMultiplier = 0.06f;
+        _lrGuide.material = new Material(Shader.Find("Sprites/Default"));
+        _lrGuide.startColor = _lrGuide.endColor = new Color(1f, 0.9f, 0.2f, 0.95f);
 
-        tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        tip.name = "SlashTip";
-        tip.transform.SetParent(transform);
-        tip.transform.localScale = Vector3.one * 0.18f;
-        var col = tip.GetComponent<Collider>(); if (col) col.enabled = false;
-        var mr = tip.GetComponent<MeshRenderer>();
+        _tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        _tip.name = "SlashTip";
+        _tip.transform.SetParent(transform);
+        _tip.transform.localScale = Vector3.one * 0.18f;
+        var col = _tip.GetComponent<Collider>();
+        if (col) col.enabled = false;
+
+        var mr = _tip.GetComponent<MeshRenderer>();
         mr.material = new Material(Shader.Find("Standard"));
         mr.material.color = new Color(1f, 0.9f, 0.2f, 0.95f);
     }
 
     void Update()
     {
-        t += Time.deltaTime;
-        if (t > life) { Cleanup(); return; }
+        _t += Time.deltaTime;
+        if (_t > _life) { Cleanup(); return; }
 
         float y = transform.position.y;
         Vector3 center = new Vector3(transform.position.x, y + 0.02f, transform.position.z);
 
-        float half = arcDegrees * 0.5f;
+        float half = _arcDegrees * 0.5f;
         Quaternion left = Quaternion.Euler(0f, -half, 0f) * transform.rotation;
+
         for (int i = 0; i <= SEGMENTS; i++)
         {
-            float a = (i / (float)SEGMENTS) * arcDegrees;
+            float a = (i / (float)SEGMENTS) * _arcDegrees;
             Quaternion rot = Quaternion.Euler(0f, a, 0f) * left;
-            Vector3 p = center + (rot * Vector3.forward) * radius;
-            lrArc.SetPosition(i, p);
+            Vector3 p = center + (rot * Vector3.forward) * _radius;
+            _lrArc.SetPosition(i, p);
         }
 
         Vector3 start = center;
-        Vector3 end = center + transform.forward * radius;
-        lrGuide.SetPosition(0, start);
-        lrGuide.SetPosition(1, end);
-        if (tip) tip.transform.position = end;
+        Vector3 end = center + transform.forward * _radius;
+        _lrGuide.SetPosition(0, start);
+        _lrGuide.SetPosition(1, end);
+
+        if (_tip) _tip.transform.position = end;
 
         Vector3 p1 = new Vector3(transform.position.x, y + 0.1f, transform.position.z);
-        Vector3 p2 = new Vector3(transform.position.x, y + 0.1f + height, transform.position.z);
-        Collider[] cols = Physics.OverlapCapsule(p1, p2, radius, playerMask);
+        Vector3 p2 = new Vector3(transform.position.x, y + 0.1f + _height, transform.position.z);
+        Collider[] cols = Physics.OverlapCapsule(p1, p2, _radius, _playerMask);
 
         foreach (var c in cols)
         {
             GameObject root = c.attachedRigidbody ? c.attachedRigidbody.gameObject : c.transform.root.gameObject;
             if (root == null) root = c.gameObject;
-            if (!root.CompareTag(playerTag) && !c.CompareTag(playerTag)) continue;
+            if (!root.CompareTag(_playerTag) && !c.CompareTag(_playerTag)) continue;
 
-            Vector3 to = (root.transform.position - transform.position);
+            Vector3 to = root.transform.position - transform.position;
             to.y = 0f;
+
             if (Vector3.Angle(transform.forward, to) > half) continue;
-            if (to.magnitude > radius + 0.1f) continue;
+            if (to.magnitude > _radius + 0.1f) continue;
 
             int id = root.GetInstanceID();
-            if (damagedTargets.Contains(id)) continue;
+            if (_damagedTargets.Contains(id)) continue;
 
-            damagedTargets.Add(id);
-            owner.TryDamagePlayerGO(root, damage);
+            _damagedTargets.Add(id);
+            _owner.TryDamagePlayerGO(root, _damage);
             Log($"Hit player (id={id})");
         }
     }
 
     void Cleanup()
     {
-        if (lrGuide) Destroy(lrGuide.gameObject);
-        if (tip) Destroy(tip);
-        damagedTargets.Clear();
+        if (_lrGuide) Destroy(_lrGuide.gameObject);
+        if (_tip) Destroy(_tip);
+        _damagedTargets.Clear();
         Destroy(gameObject);
     }
 }
