@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84168773a1e2e5d4c904bb3d37ef5369, type: 3}
   m_Name: TotemSettings
-  m_EditorClassIdentifier: Assembly-CSharp::TotemSettingsSO
+  m_EditorClassIdentifier: 
   Prefab: {fileID: 0}
   RegenPerSec: 8
   RingRadius: 8

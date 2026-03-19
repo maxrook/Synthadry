@@ -11,13 +11,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b44f9585b9514e45b6a94ab6ebc25b0, type: 3}
   m_Name: BossConfig
-  m_EditorClassIdentifier: Assembly-CSharp::BossConfigSO
+  m_EditorClassIdentifier: 
   MaxHealth: 1500
   AggroRadius: 18
   PatternPause: {x: 1, y: 1.6}
   ChaseSpeed: 4.5
   AttackMoveSpeed: 3.5
-  ChaseTurnSpeed: 720
-  PivotTurnSpeed: 1440
-  ChaseRepathInterval: 0.15
-  ChaseSampleRadius: 2

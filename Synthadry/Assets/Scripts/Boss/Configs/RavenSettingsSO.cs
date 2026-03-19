@@ -3,14 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "RavenSettings", menuName = "Boss/Attacks/Raven")]
 public class RavenSettingsSO : ScriptableObject
 {
-    [Header("Префаб воронов")]
+    [Header("Префаб ворона / снаряда")]
     public GameObject ProjectilePrefab;
-
-    [Header("Количество выстрелов в серии")]
-    public int Burst = 12;
-
-    [Header("Интервал между выстрелами (сек)")]
-    public float Rate = 0.09f;
 
     [Header("Скорость полёта снаряда")]
     public float Speed = 16f;
@@ -21,6 +15,47 @@ public class RavenSettingsSO : ScriptableObject
     [Header("Урон от снаряда")]
     public float Damage = 10f;
 
-    [Header("Разброс угла выстрелов")]
-    public float SpreadAngle = 8f;
+    public RavenProjectile SpawnProjectile(
+        BossObjectPool pool,
+        BossController owner,
+        bool debugLogs,
+        LayerMask playerMask,
+        string playerTag,
+        Vector3 position,
+        Vector3 direction)
+    {
+        if (ProjectilePrefab == null)
+        {
+            Debug.LogWarning("[RavenSettingsSO] ProjectilePrefab is null.");
+            return null;
+        }
+
+        if (direction.sqrMagnitude <= 0.0001f)
+            direction = Vector3.forward;
+
+        var rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+        var go = pool.Spawn(ProjectilePrefab, position, rotation);
+        if (go == null)
+            return null;
+
+        var projectile = go.GetComponent<RavenProjectile>();
+        if (projectile == null)
+        {
+            Debug.LogError("[RavenSettingsSO] RavenProjectile component not found on ProjectilePrefab.");
+            return null;
+        }
+
+        projectile.DebugLogs = debugLogs;
+        projectile.Init(
+            owner: owner,
+            dir: direction,
+            speed: Speed,
+            life: Life,
+            damage: Damage,
+            playerMask: playerMask,
+            playerTag: playerTag
+        );
+
+        return projectile;
+    }
 }

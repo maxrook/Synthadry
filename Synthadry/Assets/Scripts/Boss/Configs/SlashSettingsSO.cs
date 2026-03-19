@@ -6,17 +6,8 @@ public class SlashSettingsSO : ScriptableObject
     [Header("Префаб зоны удара")]
     public GameObject HitboxPrefab;
 
-    [Header("Количество ударов")]
-    public int Count = 1;
-
-    [Header("Подготовка к удару (сек)")]
-    public float Windup = 0.4f;
-
     [Header("Активное окно удара (сек)")]
     public float Active = 0.25f;
-
-    [Header("Задержка после удара (сек)")]
-    public float Recovery = 0.3f;
 
     [Header("Урон от удара")]
     public float Damage = 25f;
@@ -30,6 +21,44 @@ public class SlashSettingsSO : ScriptableObject
     [Header("Высота hitbox")]
     public float Height = 1.2f;
 
-    [Header("Макс. время ожидание игрока пока он не войдёт в радиус атаки (сек)")]
-    public float WaitMax = 3.0f;
+    public SlashHitbox SpawnHitbox(
+        BossObjectPool pool,
+        BossController owner,
+        bool debugLogs,
+        LayerMask playerMask,
+        string playerTag,
+        Vector3 position,
+        Quaternion rotation)
+    {
+        if (HitboxPrefab == null)
+        {
+            Debug.LogWarning("[SlashSettingsSO] HitboxPrefab is null.");
+            return null;
+        }
+
+        var go = pool.Spawn(HitboxPrefab, position, rotation);
+        if (go == null)
+            return null;
+
+        var hitbox = go.GetComponent<SlashHitbox>();
+        if (hitbox == null)
+        {
+            Debug.LogError("[SlashSettingsSO] SlashHitbox component not found on HitboxPrefab.");
+            return null;
+        }
+
+        hitbox.DebugLogs = debugLogs;
+        hitbox.Init(
+            owner: owner,
+            activeTime: Active,
+            damage: Damage,
+            radius: Radius,
+            arcDegrees: ArcDegrees,
+            height: Height,
+            playerMask: playerMask,
+            playerTag: playerTag
+        );
+
+        return hitbox;
+    }
 }

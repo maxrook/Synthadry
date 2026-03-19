@@ -6,16 +6,31 @@ public class TotemSettingsSO : ScriptableObject
     [Header("Префаб тотема")]
     public GameObject Prefab;
 
-    [Header("Регенерация HP/сек при тотемах")]
-    public float RegenPerSec = 8f;
+    public Totem SpawnTotem(
+        BossObjectPool pool,
+        BossController owner,
+        bool debugLogs,
+        Vector3 position)
+    {
+        if (Prefab == null)
+        {
+            Debug.LogWarning("[TotemSettingsSO] Prefab is null.");
+            return null;
+        }
 
-    [Header("Радиус кольца тотемов")]
-    public float RingRadius = 8f;
+        var go = pool.Spawn(Prefab, position, Quaternion.identity);
+        if (go == null)
+            return null;
 
-    [Header("Стан при появлении (сек)")]
-    public float StunDurationOnSpawn = 1.0f;
+        var totem = go.GetComponent<Totem>();
+        if (totem == null)
+        {
+            Debug.LogError("[TotemSettingsSO] Totem component not found on Prefab.");
+            return null;
+        }
 
-    [Header("Процент HP для появления тотемов (0–1)")]
-    [Range(0.05f, 1f)]
-    public float TriggerHealthPercent = 0.25f;
+        totem.DebugLogs = debugLogs;
+        totem.Init(owner);
+        return totem;
+    }
 }

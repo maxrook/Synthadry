@@ -12,9 +12,6 @@ public class ChargeSettingsSO : ScriptableObject
     [Header("Длительность рывка (сек)")]
     public float Duration = 0.7f;
 
-    [Header("Перезарядка рывка (сек)")]
-    public float Cooldown = 2.0f;
-
     [Header("Урон от рывка")]
     public float Damage = 30f;
 }

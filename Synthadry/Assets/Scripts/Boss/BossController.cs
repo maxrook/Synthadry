@@ -50,6 +50,7 @@ public class BossController : MonoBehaviour
 
     private NavMeshAgent _agent;
     private Collider _bossCol;
+    private BossObjectPool _objectPool;
 
     private bool _fightStarted;
     private bool _isAttacking;
@@ -82,9 +83,12 @@ public class BossController : MonoBehaviour
         _playerMask = LayerMask.GetMask("Default");
         _agent = GetComponent<NavMeshAgent>();
         _bossCol = GetComponent<Collider>();
+        _objectPool = new BossObjectPool($"{name}_BossPool");
 
         if (_config != null)
             _currentHealth = _config.MaxHealth;
+
+        WarmupPools();
     }
 
     void Start()
@@ -138,6 +142,21 @@ public class BossController : MonoBehaviour
             StartCoroutine(ChooseAndExecutePattern());
     }
 
+    private void WarmupPools()
+    {
+        if (_slam != null && _slam.WavePrefab != null)
+            _objectPool.Warmup(_slam.WavePrefab, Mathf.Max(1, _config.SlamSeriesCount));
+
+        if (_raven != null && _raven.ProjectilePrefab != null)
+            _objectPool.Warmup(_raven.ProjectilePrefab, Mathf.Max(1, _config.RavenBurst));
+
+        if (_slash != null && _slash.HitboxPrefab != null)
+            _objectPool.Warmup(_slash.HitboxPrefab, Mathf.Max(1, _config.SlashCount));
+
+        if (_totems != null && _totems.Prefab != null)
+            _objectPool.Warmup(_totems.Prefab, 3);
+    }
+
     private void UpdateWindupIndicator()
     {
         if (!_windupOn || _windupBillboardGO == null)
@@ -177,7 +196,7 @@ public class BossController : MonoBehaviour
     private void UpdateTotemRegen()
     {
         if (_activeTotems.Count > 0)
-            _currentHealth = Mathf.Min(_config.MaxHealth, _currentHealth + _totems.RegenPerSec * Time.deltaTime);
+            _currentHealth = Mathf.Min(_config.MaxHealth, _currentHealth + _config.TotemRegenPerSec * Time.deltaTime);
     }
 
     private void CheckDeath()
@@ -243,7 +262,7 @@ public class BossController : MonoBehaviour
     {
         _isAttacking = true;
 
-        if (!_totemsTriggeredOnce && _currentHealth <= _config.MaxHealth * _totems.TriggerHealthPercent)
+        if (!_totemsTriggeredOnce && _currentHealth <= _config.MaxHealth * _config.TotemTriggerHealthPercent)
         {
             Log("Фаза тотемов.");
             yield return SpawnTotemsPhase();
@@ -269,7 +288,7 @@ public class BossController : MonoBehaviour
                 yield return SlashSeries();
             }
 
-            if (!_isDead && Time.time - _lastChargeTime > _charge.Cooldown && Random.value < 0.6f)
+            if (!_isDead && Time.time - _lastChargeTime > _config.ChargeCooldown && Random.value < 0.6f)
             {
                 Log("Паттерн: CHARGE");
                 yield return ChargeRam();
@@ -296,7 +315,7 @@ public class BossController : MonoBehaviour
 
         FaceTarget(_player ? _player.position : transform.position + transform.forward);
 
-        for (int i = 0; i < _slam.SeriesCount; i++)
+        for (int i = 0; i < _config.SlamSeriesCount; i++)
         {
             if (_isDead)
                 yield break;
@@ -304,24 +323,11 @@ public class BossController : MonoBehaviour
             yield return new WaitForSeconds(0.2f);
 
             Vector3 gpos = GetGroundPointUnderBoss();
-            bool wide = i == _slam.SeriesCount - 1;
+            bool wide = i == _config.SlamSeriesCount - 1;
 
-            var go = Instantiate(_slam.WavePrefab, gpos, Quaternion.identity);
-            var wave = go.GetComponent<GroundWave>();
-            wave.DebugLogs = _debugLogs;
-            wave.Init(
-                owner: this,
-                origin: gpos,
-                moveSpeed: wide ? _slam.WideWaveSpeed : _slam.NormalWaveSpeed,
-                maxRadius: wide ? _slam.WideWaveMaxRadius : _slam.NormalWaveMaxRadius,
-                thickness: 1.2f,
-                height: 0.5f,
-                damage: _slam.Damage,
-                playerMask: _playerMask,
-                playerTag: _playerTag
-            );
+            _slam.SpawnWave(_objectPool, this, _debugLogs, _playerMask, _playerTag, gpos, wide);
 
-            yield return new WaitForSeconds(_slam.Interval);
+            yield return new WaitForSeconds(_config.SlamInterval);
         }
 
         if (!_isDead && _agent.enabled)
@@ -336,25 +342,18 @@ public class BossController : MonoBehaviour
         Vector3 dir = _player ? (_player.position - transform.position).normalized : transform.forward;
         FaceTarget(transform.position + dir);
 
-        for (int i = 0; i < _raven.Burst; i++)
+        for (int i = 0; i < _config.RavenBurst; i++)
         {
             if (_isDead)
                 yield break;
 
-            float off = Random.Range(-_raven.SpreadAngle, _raven.SpreadAngle);
+            float off = Random.Range(-_config.RavenSpreadAngle, _config.RavenSpreadAngle);
             Quaternion q = Quaternion.AngleAxis(off, Vector3.up);
             Vector3 shotDir = q * dir;
 
-            var go = Instantiate(
-                _raven.ProjectilePrefab,
-                transform.position + Vector3.up * 1.0f,
-                Quaternion.LookRotation(shotDir, Vector3.up));
+            _raven.SpawnProjectile(_objectPool, this, _debugLogs, _playerMask, _playerTag, transform.position + Vector3.up * 1.0f, shotDir);
 
-            var rp = go.GetComponent<RavenProjectile>();
-            rp.DebugLogs = _debugLogs;
-            rp.Init(this, shotDir, _raven.Speed, _raven.Life, _raven.Damage, _playerMask, _playerTag);
-
-            yield return new WaitForSeconds(_raven.Rate);
+            yield return new WaitForSeconds(_config.RavenRate);
         }
 
         if (!_isDead && _agent.enabled)
@@ -366,7 +365,7 @@ public class BossController : MonoBehaviour
         if (_agent.enabled)
             _agent.isStopped = true;
 
-        for (int i = 0; i < _slash.Count; i++)
+        for (int i = 0; i < _config.SlashCount; i++)
         {
             if (_isDead)
                 yield break;
@@ -374,7 +373,7 @@ public class BossController : MonoBehaviour
             EnableWindupIndicator(true);
 
             float wind = 0f;
-            while (wind < _slash.Windup)
+            while (wind < _config.SlashWindup)
             {
                 if (_isDead)
                 {
@@ -397,21 +396,9 @@ public class BossController : MonoBehaviour
             Quaternion rot = transform.rotation;
             Vector3 spawnPos = GetGroundPointUnderBoss() + Vector3.up * 0.2f;
 
-            var hb = Instantiate(_slash.HitboxPrefab, spawnPos, rot);
-            var hitbox = hb.GetComponent<SlashHitbox>();
+            _slash.SpawnHitbox(_objectPool, this, _debugLogs, _playerMask, _playerTag, spawnPos, rot);
 
-            hitbox.Init(
-                this,
-                _slash.Active,
-                _slash.Damage,
-                _slash.Radius,
-                _slash.ArcDegrees,
-                _slash.Height,
-                _playerMask,
-                _playerTag
-            );
-
-            yield return new WaitForSeconds(_slash.Active + _slash.Recovery);
+            yield return new WaitForSeconds(_slash.Active + _config.SlashRecovery);
         }
 
         if (!_isDead && _agent.enabled)
@@ -510,7 +497,7 @@ public class BossController : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             float ang = i * 120f * Mathf.Deg2Rad;
-            Vector3 ring = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * _totems.RingRadius;
+            Vector3 ring = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * _config.TotemRingRadius;
             Vector3 targetXZ = transform.position + ring;
 
             Vector3 placed = targetXZ;
@@ -519,16 +506,15 @@ public class BossController : MonoBehaviour
 
             placed += Vector3.up * 0.01f;
 
-            var go = Instantiate(_totems.Prefab, placed, Quaternion.identity);
-            var totem = go.GetComponent<Totem>();
-            totem.DebugLogs = _debugLogs;
-            totem.Init(this);
-
-            _activeTotems.Add(totem);
-            Log($"Тотем: {placed}");
+            var totem = _totems.SpawnTotem(_objectPool, this, _debugLogs, placed);
+            if (totem != null)
+            {
+                _activeTotems.Add(totem);
+                Log($"Тотем: {placed}");
+            }
         }
 
-        yield return new WaitForSeconds(_totems.StunDurationOnSpawn);
+        yield return new WaitForSeconds(_config.TotemStunDurationOnSpawn);
 
         _isStunned = false;
 
@@ -554,13 +540,6 @@ public class BossController : MonoBehaviour
             Quaternion target = Quaternion.LookRotation(dir);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, target, 1200f * Time.deltaTime);
         }
-    }
-
-    private static float PlanarDistance(Vector3 a, Vector3 b)
-    {
-        a.y = 0f;
-        b.y = 0f;
-        return Vector3.Distance(a, b);
     }
 
     private bool TryRaycastGround(Vector3 xz, out Vector3 hitPoint)
@@ -674,10 +653,7 @@ public class BossController : MonoBehaviour
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, _config.AggroRadius);
 
-        if (_totems != null)
-        {
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(transform.position, _totems.RingRadius);
-        }
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, _config.TotemRingRadius);
     }
 }

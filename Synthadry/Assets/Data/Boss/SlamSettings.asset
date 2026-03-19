@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 635dc6e97e8f22f478188f0aa4a8c222, type: 3}
   m_Name: SlamSettings
-  m_EditorClassIdentifier: Assembly-CSharp::SlamSettingsSO
+  m_EditorClassIdentifier: 
   WavePrefab: {fileID: 0}
   SeriesCount: 4
   Interval: 0.75

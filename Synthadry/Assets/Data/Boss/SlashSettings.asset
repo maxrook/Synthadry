@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2a429aee6f713b44af56d4a52e3b30a, type: 3}
   m_Name: SlashSettings
-  m_EditorClassIdentifier: Assembly-CSharp::SlashSettingsSO
+  m_EditorClassIdentifier: 
   HitboxPrefab: {fileID: 0}
   Count: 1
   Windup: 0.4

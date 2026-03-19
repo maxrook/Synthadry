@@ -6,12 +6,6 @@ public class SlamSettingsSO : ScriptableObject
     [Header("Префаб волны")]
     public GameObject WavePrefab;
 
-    [Header("Количество ударов подряд")]
-    public int SeriesCount = 4;
-
-    [Header("Интервал между волнами (сек)")]
-    public float Interval = 0.75f;
-
     [Header("Урон от волны")]
     public float Damage = 20f;
 
@@ -26,4 +20,46 @@ public class SlamSettingsSO : ScriptableObject
 
     [Header("Макс. радиус широкой волны")]
     public float WideWaveMaxRadius = 19f;
+
+    public GroundWave SpawnWave(
+        BossObjectPool pool,
+        BossController owner,
+        bool debugLogs,
+        LayerMask playerMask,
+        string playerTag,
+        Vector3 origin,
+        bool wide)
+    {
+        if (WavePrefab == null)
+        {
+            Debug.LogWarning("[SlamSettingsSO] WavePrefab is null.");
+            return null;
+        }
+
+        var go = pool.Spawn(WavePrefab, origin, Quaternion.identity);
+        if (go == null)
+            return null;
+
+        var wave = go.GetComponent<GroundWave>();
+        if (wave == null)
+        {
+            Debug.LogError("[SlamSettingsSO] GroundWave component not found on WavePrefab.");
+            return null;
+        }
+
+        wave.DebugLogs = debugLogs;
+        wave.Init(
+            owner: owner,
+            origin: origin,
+            moveSpeed: wide ? WideWaveSpeed : NormalWaveSpeed,
+            maxRadius: wide ? WideWaveMaxRadius : NormalWaveMaxRadius,
+            thickness: 1.2f,
+            height: 0.5f,
+            damage: Damage,
+            playerMask: playerMask,
+            playerTag: playerTag
+        );
+
+        return wave;
+    }
 }

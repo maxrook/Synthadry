@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GroundWave : MonoBehaviour
+public class GroundWave : BossPooledBehaviour
 {
     public bool DebugLogs = false;
     void Log(string m) { if (DebugLogs) Debug.Log($"[BOSS:WAVE] {m}"); }
 
-    LineRenderer _lr;
-    const int SEGMENTS = 64;
+    private LineRenderer _lr;
+    private const int SEGMENTS = 64;
 
     private BossController _owner;
     private Vector3 _origin;
@@ -19,11 +19,23 @@ public class GroundWave : MonoBehaviour
     private bool _init;
 
     private float _footHitWindow = 0.20f;
-    private readonly HashSet<int> _damagedTargets = new HashSet<int>();
+    private readonly HashSet<int> _damagedTargets = new();
+
+    private void Awake()
+    {
+        SetupLR();
+    }
 
     public void Init(
-        BossController owner, Vector3 origin, float moveSpeed, float maxRadius,
-        float thickness, float height, float damage, LayerMask playerMask, string playerTag)
+        BossController owner,
+        Vector3 origin,
+        float moveSpeed,
+        float maxRadius,
+        float thickness,
+        float height,
+        float damage,
+        LayerMask playerMask,
+        string playerTag)
     {
         _owner = owner;
         _origin = origin;
@@ -35,6 +47,8 @@ public class GroundWave : MonoBehaviour
         _playerMask = playerMask;
         _playerTag = playerTag;
 
+        _currentRadius = 0f;
+        _damagedTargets.Clear();
         transform.position = origin;
         _init = true;
 
@@ -42,9 +56,15 @@ public class GroundWave : MonoBehaviour
         Log($"Spawn (speed={moveSpeed}, maxR={maxRadius}, y={origin.y:0.00})");
     }
 
-    void SetupLR()
+    private void SetupLR()
     {
-        _lr = gameObject.AddComponent<LineRenderer>();
+        if (_lr != null)
+            return;
+
+        _lr = gameObject.GetComponent<LineRenderer>();
+        if (_lr == null)
+            _lr = gameObject.AddComponent<LineRenderer>();
+
         _lr.positionCount = SEGMENTS + 1;
         _lr.loop = true;
         _lr.useWorldSpace = true;
@@ -55,10 +75,15 @@ public class GroundWave : MonoBehaviour
 
     void Update()
     {
-        if (!_init) return;
+        if (!_init)
+            return;
 
         _currentRadius += _moveSpeed * Time.deltaTime;
-        if (_currentRadius > _maxRadius) { Destroy(gameObject); return; }
+        if (_currentRadius > _maxRadius)
+        {
+            ReturnToPool();
+            return;
+        }
 
         float y = _origin.y + 0.02f;
         for (int i = 0; i <= SEGMENTS; i++)
@@ -96,12 +121,12 @@ public class GroundWave : MonoBehaviour
                 if (pc == null || pc.isTrigger) continue;
                 feetY = Mathf.Min(feetY, pc.bounds.min.y);
             }
-            if (float.IsPositiveInfinity(feetY)) feetY = root.transform.position.y;
+
+            if (float.IsPositiveInfinity(feetY))
+                feetY = root.transform.position.y;
 
             if (feetY > _origin.y + _footHitWindow)
-            {
                 continue;
-            }
 
             _damagedTargets.Add(id);
             _owner.TryDamagePlayerGO(root, _damage);
@@ -109,8 +134,10 @@ public class GroundWave : MonoBehaviour
         }
     }
 
-    void OnDestroy()
+    public override void OnReturnedToPool()
     {
+        _init = false;
+        _currentRadius = 0f;
         _damagedTargets.Clear();
     }
 }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SlashHitbox : MonoBehaviour
+public class SlashHitbox : BossPooledBehaviour
 {
     public bool DebugLogs = false;
     void Log(string m) { if (DebugLogs) Debug.Log($"[BOSS:SLASH] {m}"); }
@@ -16,14 +16,20 @@ public class SlashHitbox : MonoBehaviour
     private LayerMask _playerMask;
     private string _playerTag;
     private float _t;
+    private bool _init;
 
-    private readonly HashSet<int> _damagedTargets = new HashSet<int>();
+    private readonly HashSet<int> _damagedTargets = new();
 
-    LineRenderer _lrArc;
-    LineRenderer _lrGuide;
-    GameObject _tip;
+    private LineRenderer _lrArc;
+    private LineRenderer _lrGuide;
+    private GameObject _tip;
 
-    const int SEGMENTS = 36;
+    private const int SEGMENTS = 36;
+
+    private void Awake()
+    {
+        SetupVisuals();
+    }
 
     public void Init(
         BossController owner,
@@ -43,45 +49,69 @@ public class SlashHitbox : MonoBehaviour
         _height = height;
         _playerMask = playerMask;
         _playerTag = playerTag;
+        _t = 0f;
+        _init = true;
 
+        _damagedTargets.Clear();
         SetupVisuals();
         Log($"Spawn (active={activeTime:0.00}s, dmg={damage})");
     }
 
-    void SetupVisuals()
+    private void SetupVisuals()
     {
-        _lrArc = gameObject.AddComponent<LineRenderer>();
-        _lrArc.positionCount = SEGMENTS + 1;
-        _lrArc.loop = false;
-        _lrArc.useWorldSpace = true;
-        _lrArc.widthMultiplier = 0.08f;
-        _lrArc.material = new Material(Shader.Find("Sprites/Default"));
-        _lrArc.startColor = _lrArc.endColor = new Color(1f, 0.4f, 0.2f, 0.9f);
+        if (_lrArc == null)
+        {
+            _lrArc = gameObject.GetComponent<LineRenderer>();
+            if (_lrArc == null)
+                _lrArc = gameObject.AddComponent<LineRenderer>();
 
-        _lrGuide = new GameObject("SlashGuide").AddComponent<LineRenderer>();
-        _lrGuide.transform.SetParent(transform, worldPositionStays: false);
-        _lrGuide.positionCount = 2;
-        _lrGuide.useWorldSpace = true;
-        _lrGuide.widthMultiplier = 0.06f;
-        _lrGuide.material = new Material(Shader.Find("Sprites/Default"));
-        _lrGuide.startColor = _lrGuide.endColor = new Color(1f, 0.9f, 0.2f, 0.95f);
+            _lrArc.positionCount = SEGMENTS + 1;
+            _lrArc.loop = false;
+            _lrArc.useWorldSpace = true;
+            _lrArc.widthMultiplier = 0.08f;
+            _lrArc.material = new Material(Shader.Find("Sprites/Default"));
+            _lrArc.startColor = _lrArc.endColor = new Color(1f, 0.4f, 0.2f, 0.9f);
+        }
 
-        _tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        _tip.name = "SlashTip";
-        _tip.transform.SetParent(transform);
-        _tip.transform.localScale = Vector3.one * 0.18f;
-        var col = _tip.GetComponent<Collider>();
-        if (col) col.enabled = false;
+        if (_lrGuide == null)
+        {
+            var guideGo = new GameObject("SlashGuide");
+            guideGo.transform.SetParent(transform, worldPositionStays: false);
+            _lrGuide = guideGo.AddComponent<LineRenderer>();
+            _lrGuide.positionCount = 2;
+            _lrGuide.useWorldSpace = true;
+            _lrGuide.widthMultiplier = 0.06f;
+            _lrGuide.material = new Material(Shader.Find("Sprites/Default"));
+            _lrGuide.startColor = _lrGuide.endColor = new Color(1f, 0.9f, 0.2f, 0.95f);
+        }
 
-        var mr = _tip.GetComponent<MeshRenderer>();
-        mr.material = new Material(Shader.Find("Standard"));
-        mr.material.color = new Color(1f, 0.9f, 0.2f, 0.95f);
+        if (_tip == null)
+        {
+            _tip = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _tip.name = "SlashTip";
+            _tip.transform.SetParent(transform);
+            _tip.transform.localScale = Vector3.one * 0.18f;
+
+            var col = _tip.GetComponent<Collider>();
+            if (col) col.enabled = false;
+
+            var mr = _tip.GetComponent<MeshRenderer>();
+            mr.material = new Material(Shader.Find("Standard"));
+            mr.material.color = new Color(1f, 0.9f, 0.2f, 0.95f);
+        }
     }
 
     void Update()
     {
+        if (!_init)
+            return;
+
         _t += Time.deltaTime;
-        if (_t > _life) { Cleanup(); return; }
+        if (_t > _life)
+        {
+            ReturnToPool();
+            return;
+        }
 
         float y = transform.position.y;
         Vector3 center = new Vector3(transform.position.x, y + 0.02f, transform.position.z);
@@ -102,14 +132,17 @@ public class SlashHitbox : MonoBehaviour
         _lrGuide.SetPosition(0, start);
         _lrGuide.SetPosition(1, end);
 
-        if (_tip) _tip.transform.position = end;
+        if (_tip)
+            _tip.transform.position = end;
 
         Vector3 p1 = new Vector3(transform.position.x, y + 0.1f, transform.position.z);
         Vector3 p2 = new Vector3(transform.position.x, y + 0.1f + _height, transform.position.z);
-        Collider[] cols = Physics.OverlapCapsule(p1, p2, _radius, _playerMask);
+        Collider[] cols = Physics.OverlapCapsule(p1, p2, _radius, _playerMask, QueryTriggerInteraction.Ignore);
 
         foreach (var c in cols)
         {
+            if (c == null) continue;
+
             GameObject root = c.attachedRigidbody ? c.attachedRigidbody.gameObject : c.transform.root.gameObject;
             if (root == null) root = c.gameObject;
             if (!root.CompareTag(_playerTag) && !c.CompareTag(_playerTag)) continue;
@@ -129,11 +162,10 @@ public class SlashHitbox : MonoBehaviour
         }
     }
 
-    void Cleanup()
+    public override void OnReturnedToPool()
     {
-        if (_lrGuide) Destroy(_lrGuide.gameObject);
-        if (_tip) Destroy(_tip);
+        _init = false;
+        _t = 0f;
         _damagedTargets.Clear();
-        Destroy(gameObject);
     }
 }
