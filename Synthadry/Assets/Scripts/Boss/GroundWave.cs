@@ -61,7 +61,7 @@ public class GroundWave : BossPooledBehaviour
         if (_lr != null)
             return;
 
-        _lr = gameObject.GetComponent<LineRenderer>();
+        _lr = GetComponent<LineRenderer>();
         if (_lr == null)
             _lr = gameObject.AddComponent<LineRenderer>();
 
@@ -134,7 +134,7 @@ public class GroundWave : BossPooledBehaviour
         }
     }
 
-    public override void OnReturnedToPool()
+    protected override void PrepareToReturn()
     {
         _init = false;
         _currentRadius = 0f;

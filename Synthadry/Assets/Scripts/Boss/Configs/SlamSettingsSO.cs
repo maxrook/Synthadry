@@ -21,7 +21,7 @@ public class SlamSettingsSO : ScriptableObject
     [Header("Макс. радиус широкой волны")]
     public float WideWaveMaxRadius = 19f;
 
-    public GroundWave SpawnWave(
+    public GroundWave Create(
         BossObjectPool pool,
         BossController owner,
         bool debugLogs,
@@ -30,22 +30,8 @@ public class SlamSettingsSO : ScriptableObject
         Vector3 origin,
         bool wide)
     {
-        if (WavePrefab == null)
-        {
-            Debug.LogWarning("[SlamSettingsSO] WavePrefab is null.");
-            return null;
-        }
-
-        var go = pool.Spawn(WavePrefab, origin, Quaternion.identity);
-        if (go == null)
-            return null;
-
+        var go = pool.Get(WavePrefab, origin, Quaternion.identity);
         var wave = go.GetComponent<GroundWave>();
-        if (wave == null)
-        {
-            Debug.LogError("[SlamSettingsSO] GroundWave component not found on WavePrefab.");
-            return null;
-        }
 
         wave.DebugLogs = debugLogs;
         wave.Init(

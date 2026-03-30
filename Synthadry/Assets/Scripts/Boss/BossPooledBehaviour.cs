@@ -3,20 +3,19 @@ using UnityEngine;
 public abstract class BossPooledBehaviour : MonoBehaviour
 {
     private BossObjectPool _pool;
+    private GameObject _prefab;
 
-    public void SetPool(BossObjectPool pool)
+    public void SetPool(BossObjectPool pool, GameObject prefab)
     {
         _pool = pool;
+        _prefab = prefab;
     }
 
     protected void ReturnToPool()
     {
-        if (_pool != null)
-            _pool.Return(gameObject);
-        else
-            Destroy(gameObject);
+        PrepareToReturn();
+        _pool.Return(_prefab, gameObject);
     }
 
-    public virtual void OnTakenFromPool() { }
-    public virtual void OnReturnedToPool() { }
+    protected virtual void PrepareToReturn() { }
 }

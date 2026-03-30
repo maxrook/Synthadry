@@ -137,7 +137,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4413992603716648849, guid: ee550cd07e4064f42837a5ad18ab0703, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8034976556952911671, guid: ee550cd07e4064f42837a5ad18ab0703, type: 3}
       propertyPath: settings
@@ -349,8 +349,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -372,7 +370,6 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -417,19 +414,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a3f52d24016be84bb160a30dda780c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  config: {fileID: 11400000, guid: c1450e685bd4e3849b74ca69205d3bbb, type: 2}
-  slam: {fileID: 11400000, guid: eba6e1250c6bd774089ea97a103a69ef, type: 2}
-  raven: {fileID: 11400000, guid: de3976a8982e5764dbc87f450d552b03, type: 2}
-  slash: {fileID: 11400000, guid: 1334c4266d71cb841a18fa149b3ef8d1, type: 2}
-  charge: {fileID: 11400000, guid: af2688b410ef1624f82abaaedcc39f42, type: 2}
-  totems: {fileID: 11400000, guid: 553c563088d3f774ba69765be2a1a725, type: 2}
-  debugLogs: 1
-  playerMask:
-    serializedVersion: 2
-    m_Bits: 0
-  playerTag: Player
-  useManualRotation: 1
-  currentHealth: 0
+  _config: {fileID: 11400000, guid: c1450e685bd4e3849b74ca69205d3bbb, type: 2}
+  _slam: {fileID: 11400000, guid: eba6e1250c6bd774089ea97a103a69ef, type: 2}
+  _raven: {fileID: 11400000, guid: de3976a8982e5764dbc87f450d552b03, type: 2}
+  _slash: {fileID: 11400000, guid: 1334c4266d71cb841a18fa149b3ef8d1, type: 2}
+  _charge: {fileID: 11400000, guid: af2688b410ef1624f82abaaedcc39f42, type: 2}
+  _totems: {fileID: 11400000, guid: 553c563088d3f774ba69765be2a1a725, type: 2}
+  _debugLogs: 0
+  _currentHealth: 0
 --- !u!1 &612220855
 GameObject:
   m_ObjectHideFlags: 0
@@ -490,8 +482,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -513,7 +503,6 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -732,8 +721,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -755,7 +742,6 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -853,10 +839,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1646642740}
-  serializedVersion: 5
+  serializedVersion: 4
   m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
+  m_Drag: 0
+  m_AngularDrag: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -964,8 +950,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -987,7 +971,6 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -1157,8 +1140,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -1180,7 +1161,6 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
@@ -1222,7 +1202,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3666719917312259551, guid: b0e9d9ef645a5ae4eb700b865fbd705e, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4606316558524158060, guid: b0e9d9ef645a5ae4eb700b865fbd705e, type: 3}
       propertyPath: m_LocalPosition.x

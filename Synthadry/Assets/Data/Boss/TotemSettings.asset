@@ -12,8 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84168773a1e2e5d4c904bb3d37ef5369, type: 3}
   m_Name: TotemSettings
   m_EditorClassIdentifier: 
-  Prefab: {fileID: 0}
-  RegenPerSec: 8
-  RingRadius: 8
-  StunDurationOnSpawn: 1
-  TriggerHealthPercent: 0.25
+  Prefab: {fileID: 2463690224852270686, guid: 1683ba794e2619d439d5c398725a0b1d, type: 3}

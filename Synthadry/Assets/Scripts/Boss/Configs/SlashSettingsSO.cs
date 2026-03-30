@@ -21,7 +21,7 @@ public class SlashSettingsSO : ScriptableObject
     [Header("Высота hitbox")]
     public float Height = 1.2f;
 
-    public SlashHitbox SpawnHitbox(
+    public SlashHitbox Create(
         BossObjectPool pool,
         BossController owner,
         bool debugLogs,
@@ -30,22 +30,8 @@ public class SlashSettingsSO : ScriptableObject
         Vector3 position,
         Quaternion rotation)
     {
-        if (HitboxPrefab == null)
-        {
-            Debug.LogWarning("[SlashSettingsSO] HitboxPrefab is null.");
-            return null;
-        }
-
-        var go = pool.Spawn(HitboxPrefab, position, rotation);
-        if (go == null)
-            return null;
-
+        var go = pool.Get(HitboxPrefab, position, rotation);
         var hitbox = go.GetComponent<SlashHitbox>();
-        if (hitbox == null)
-        {
-            Debug.LogError("[SlashSettingsSO] SlashHitbox component not found on HitboxPrefab.");
-            return null;
-        }
 
         hitbox.DebugLogs = debugLogs;
         hitbox.Init(

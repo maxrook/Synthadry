@@ -68,7 +68,7 @@ public class RavenProjectile : BossPooledBehaviour
         transform.position = next;
     }
 
-    public override void OnReturnedToPool()
+    protected override void PrepareToReturn()
     {
         _init = false;
         _t = 0f;

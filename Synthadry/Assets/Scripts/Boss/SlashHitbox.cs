@@ -61,7 +61,7 @@ public class SlashHitbox : BossPooledBehaviour
     {
         if (_lrArc == null)
         {
-            _lrArc = gameObject.GetComponent<LineRenderer>();
+            _lrArc = GetComponent<LineRenderer>();
             if (_lrArc == null)
                 _lrArc = gameObject.AddComponent<LineRenderer>();
 
@@ -76,7 +76,7 @@ public class SlashHitbox : BossPooledBehaviour
         if (_lrGuide == null)
         {
             var guideGo = new GameObject("SlashGuide");
-            guideGo.transform.SetParent(transform, worldPositionStays: false);
+            guideGo.transform.SetParent(transform, false);
             _lrGuide = guideGo.AddComponent<LineRenderer>();
             _lrGuide.positionCount = 2;
             _lrGuide.useWorldSpace = true;
@@ -162,7 +162,7 @@ public class SlashHitbox : BossPooledBehaviour
         }
     }
 
-    public override void OnReturnedToPool()
+    protected override void PrepareToReturn()
     {
         _init = false;
         _t = 0f;

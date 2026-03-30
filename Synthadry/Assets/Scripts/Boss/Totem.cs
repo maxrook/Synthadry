@@ -38,10 +38,7 @@ public class Totem : BossPooledBehaviour
         {
             IsDead = true;
             CurrentHealth = 0f;
-
-            if (_owner != null)
-                _owner.OnTotemDestroyed(this);
-
+            _owner.OnTotemDestroyed(this);
             Log("Destroyed");
             ReturnToPool();
         }
@@ -71,7 +68,7 @@ public class Totem : BossPooledBehaviour
         }
     }
 
-    public override void OnReturnedToPool()
+    protected override void PrepareToReturn()
     {
         _owner = null;
         IsDead = false;

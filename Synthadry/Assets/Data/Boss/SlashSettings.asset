@@ -12,13 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2a429aee6f713b44af56d4a52e3b30a, type: 3}
   m_Name: SlashSettings
   m_EditorClassIdentifier: 
-  HitboxPrefab: {fileID: 0}
-  Count: 1
-  Windup: 0.4
+  HitboxPrefab: {fileID: 8525185944407662626, guid: 597e19eecdd07494b97ea0f4a842c877, type: 3}
   Active: 0.25
-  Recovery: 0.3
   Damage: 25
   ArcDegrees: 100
   Radius: 4.5
   Height: 1.2
-  WaitMax: 3

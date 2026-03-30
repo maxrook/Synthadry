@@ -144,17 +144,10 @@ public class BossController : MonoBehaviour
 
     private void WarmupPools()
     {
-        if (_slam != null && _slam.WavePrefab != null)
-            _objectPool.Warmup(_slam.WavePrefab, Mathf.Max(1, _config.SlamSeriesCount));
-
-        if (_raven != null && _raven.ProjectilePrefab != null)
-            _objectPool.Warmup(_raven.ProjectilePrefab, Mathf.Max(1, _config.RavenBurst));
-
-        if (_slash != null && _slash.HitboxPrefab != null)
-            _objectPool.Warmup(_slash.HitboxPrefab, Mathf.Max(1, _config.SlashCount));
-
-        if (_totems != null && _totems.Prefab != null)
-            _objectPool.Warmup(_totems.Prefab, 3);
+        _objectPool.Warmup(_slam.WavePrefab, Mathf.Max(1, _config.SlamSeriesCount));
+        _objectPool.Warmup(_raven.ProjectilePrefab, Mathf.Max(1, _config.RavenBurst));
+        _objectPool.Warmup(_slash.HitboxPrefab, Mathf.Max(1, _config.SlashCount));
+        _objectPool.Warmup(_totems.Prefab, 3);
     }
 
     private void UpdateWindupIndicator()
@@ -325,7 +318,7 @@ public class BossController : MonoBehaviour
             Vector3 gpos = GetGroundPointUnderBoss();
             bool wide = i == _config.SlamSeriesCount - 1;
 
-            _slam.SpawnWave(_objectPool, this, _debugLogs, _playerMask, _playerTag, gpos, wide);
+            _slam.Create(_objectPool, this, _debugLogs, _playerMask, _playerTag, gpos, wide);
 
             yield return new WaitForSeconds(_config.SlamInterval);
         }
@@ -351,7 +344,7 @@ public class BossController : MonoBehaviour
             Quaternion q = Quaternion.AngleAxis(off, Vector3.up);
             Vector3 shotDir = q * dir;
 
-            _raven.SpawnProjectile(_objectPool, this, _debugLogs, _playerMask, _playerTag, transform.position + Vector3.up * 1.0f, shotDir);
+            _raven.Create(_objectPool, this, _debugLogs, _playerMask, _playerTag, transform.position + Vector3.up * 1.0f, shotDir);
 
             yield return new WaitForSeconds(_config.RavenRate);
         }
@@ -396,7 +389,7 @@ public class BossController : MonoBehaviour
             Quaternion rot = transform.rotation;
             Vector3 spawnPos = GetGroundPointUnderBoss() + Vector3.up * 0.2f;
 
-            _slash.SpawnHitbox(_objectPool, this, _debugLogs, _playerMask, _playerTag, spawnPos, rot);
+            _slash.Create(_objectPool, this, _debugLogs, _playerMask, _playerTag, spawnPos, rot);
 
             yield return new WaitForSeconds(_slash.Active + _config.SlashRecovery);
         }
@@ -506,12 +499,9 @@ public class BossController : MonoBehaviour
 
             placed += Vector3.up * 0.01f;
 
-            var totem = _totems.SpawnTotem(_objectPool, this, _debugLogs, placed);
-            if (totem != null)
-            {
-                _activeTotems.Add(totem);
-                Log($"Тотем: {placed}");
-            }
+            var totem = _totems.Create(_objectPool, this, _debugLogs, placed);
+            _activeTotems.Add(totem);
+            Log($"Тотем: {placed}");
         }
 
         yield return new WaitForSeconds(_config.TotemStunDurationOnSpawn);
