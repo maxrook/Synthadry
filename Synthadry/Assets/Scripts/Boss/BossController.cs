@@ -7,6 +7,16 @@ using UnityEngine.AI;
 [RequireComponent(typeof(Collider))]
 public class BossController : MonoBehaviour
 {
+    private enum BossAttackPattern
+    {
+        None,
+        Slam,
+        Raven,
+        Slash,
+        Charge,
+        Totems
+    }
+
     [Header("Конфиг босса")]
     [SerializeField] private BossConfigSO _config;
 
@@ -45,6 +55,10 @@ public class BossController : MonoBehaviour
     private float _groundRayStartHeight = 1000f;
     private float _groundRayMaxDistance = 5000f;
 
+    private const float _nearDistancePadding = 0.75f;
+    private const float _chargeMaxDistanceFactor = 0.9f;
+    private const float _chargeForwardDotThreshold = 0.45f;
+
     [SerializeField, Header("Текущее здоровье босса")]
     private float _currentHealth;
 
@@ -71,6 +85,7 @@ public class BossController : MonoBehaviour
     private float _windupLocalTime;
 
     private Transform _player;
+    private BossAttackPattern _lastUsedPattern = BossAttackPattern.None;
 
     void Log(string msg)
     {
@@ -260,32 +275,44 @@ public class BossController : MonoBehaviour
             Log("Фаза тотемов.");
             yield return SpawnTotemsPhase();
             _totemsTriggeredOnce = true;
+            _lastUsedPattern = BossAttackPattern.Totems;
         }
         else
         {
-            int choice = Random.Range(0, 3);
+            BossAttackPattern pattern = SelectNextPattern();
 
-            if (choice == 0)
+            switch (pattern)
             {
-                Log("Паттерн: SLAM WAVES");
-                yield return SlamSeries();
-            }
-            else if (choice == 1)
-            {
-                Log("Паттерн: RAVEN STREAM");
-                yield return RavenStream();
-            }
-            else
-            {
-                Log("Паттерн: SLASH SERIES");
-                yield return SlashSeries();
-            }
+                case BossAttackPattern.Slash:
+                    Log("Паттерн: SLASH SERIES");
+                    yield return SlashSeries();
+                    _lastUsedPattern = BossAttackPattern.Slash;
+                    break;
 
-            if (!_isDead && Time.time - _lastChargeTime > _config.ChargeCooldown && Random.value < 0.6f)
-            {
-                Log("Паттерн: CHARGE");
-                yield return ChargeRam();
-                _lastChargeTime = Time.time;
+                case BossAttackPattern.Charge:
+                    Log("Паттерн: CHARGE");
+                    yield return ChargeRam();
+                    _lastChargeTime = Time.time;
+                    _lastUsedPattern = BossAttackPattern.Charge;
+                    break;
+
+                case BossAttackPattern.Slam:
+                    Log("Паттерн: SLAM WAVES");
+                    yield return SlamSeries();
+                    _lastUsedPattern = BossAttackPattern.Slam;
+                    break;
+
+                case BossAttackPattern.Raven:
+                    Log("Паттерн: RAVEN STREAM");
+                    yield return RavenStream();
+                    _lastUsedPattern = BossAttackPattern.Raven;
+                    break;
+
+                default:
+                    Log("Паттерн: SLAM WAVES");
+                    yield return SlamSeries();
+                    _lastUsedPattern = BossAttackPattern.Slam;
+                    break;
             }
         }
 
@@ -296,6 +323,132 @@ public class BossController : MonoBehaviour
         }
 
         _isAttacking = false;
+    }
+
+    private BossAttackPattern SelectNextPattern()
+    {
+        float distance = GetDistanceToPlayerXZ();
+        float nearDistance = GetNearAttackDistance();
+        float chargeMaxDistance = GetChargeMaxDistance();
+
+        List<BossAttackPattern> candidates = new();
+
+        if (distance <= nearDistance)
+        {
+            candidates.Add(BossAttackPattern.Slash);
+            candidates.Add(BossAttackPattern.Slam);
+            candidates.Add(BossAttackPattern.Raven);
+        }
+        else if (distance <= chargeMaxDistance)
+        {
+            if (CanUseCharge(distance))
+                candidates.Add(BossAttackPattern.Charge);
+
+            candidates.Add(BossAttackPattern.Slam);
+            candidates.Add(BossAttackPattern.Raven);
+            candidates.Add(BossAttackPattern.Slash);
+        }
+        else
+        {
+            candidates.Add(BossAttackPattern.Raven);
+            candidates.Add(BossAttackPattern.Slam);
+        }
+
+        BossAttackPattern selected = SelectPatternAvoidRepeat(candidates);
+
+        Log($"Выбор атаки. Dist={distance:0.00}, Near={nearDistance:0.00}, ChargeMax={chargeMaxDistance:0.00}, Last={_lastUsedPattern}, Next={selected}");
+        return selected;
+    }
+
+    private BossAttackPattern SelectPatternAvoidRepeat(List<BossAttackPattern> candidates)
+    {
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var pattern = candidates[i];
+            if (!IsPatternCurrentlyAvailable(pattern))
+                continue;
+
+            if (pattern == _lastUsedPattern)
+                continue;
+
+            return pattern;
+        }
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var pattern = candidates[i];
+            if (IsPatternCurrentlyAvailable(pattern))
+                return pattern;
+        }
+
+        return BossAttackPattern.Slam;
+    }
+
+    private bool IsPatternCurrentlyAvailable(BossAttackPattern pattern)
+    {
+        float distance = GetDistanceToPlayerXZ();
+
+        switch (pattern)
+        {
+            case BossAttackPattern.Slash:
+                return distance <= GetNearAttackDistance() + 0.5f;
+
+            case BossAttackPattern.Charge:
+                return CanUseCharge(distance);
+
+            case BossAttackPattern.Slam:
+                return true;
+
+            case BossAttackPattern.Raven:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private float GetDistanceToPlayerXZ()
+    {
+        if (_player == null)
+            return float.MaxValue;
+
+        Vector3 to = _player.position - transform.position;
+        to.y = 0f;
+        return to.magnitude;
+    }
+
+    private float GetNearAttackDistance()
+    {
+        return Mathf.Max(1f, _slash.Radius + _nearDistancePadding);
+    }
+
+    private float GetChargeMaxDistance()
+    {
+        return Mathf.Max(GetNearAttackDistance() + 0.5f, _charge.Speed * _charge.Duration * _chargeMaxDistanceFactor);
+    }
+
+    private bool CanUseCharge(float distance)
+    {
+        if (_player == null)
+            return false;
+
+        if (Time.time - _lastChargeTime <= _config.ChargeCooldown)
+            return false;
+
+        if (distance <= GetNearAttackDistance())
+            return false;
+
+        if (distance > GetChargeMaxDistance())
+            return false;
+
+        Vector3 toPlayer = _player.position - transform.position;
+        toPlayer.y = 0f;
+
+        if (toPlayer.sqrMagnitude <= 0.001f)
+            return false;
+
+        float forwardDot = Vector3.Dot(transform.forward, toPlayer.normalized);
+        return forwardDot >= _chargeForwardDotThreshold;
     }
 
     IEnumerator SlamSeries()
