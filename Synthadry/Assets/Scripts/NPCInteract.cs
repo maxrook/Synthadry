@@ -6,24 +6,22 @@ public class NPCTrigger : MonoBehaviour
 {
     private bool playerIsNear = false;
 
-    [Header("Настройки")]
+    [Header("ГЌГ Г±ГІГ°Г®Г©ГЄГЁ")]
     [SerializeField] private float lookAngleThreshold = 30f;
     [SerializeField] private KeyCode interactionKey = KeyCode.E;
 
     void Start()
     {
-        // Автоматически настраиваем коллайдер как триггер
         Collider col = GetComponent<Collider>();
         if (col != null && !col.isTrigger)
         {
             col.isTrigger = true;
-            Debug.Log("Collider автоматически настроен как Trigger");
+            Debug.Log("Collider Г ГўГІГ®Г¬Г ГІГЁГ·ГҐГ±ГЄГЁ Г­Г Г±ГІГ°Г®ГҐГ­ ГЄГ ГЄ Trigger");
         }
     }
 
     void Update()
     {
-        // Проверяем: игрок в зоне И смотрит на NPC И нажал кнопку
         if (playerIsNear && IsPlayerLookingAtMe() && Input.GetKeyDown(interactionKey))
         {
             Interact();
@@ -35,7 +33,7 @@ public class NPCTrigger : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerIsNear = true;
-            Debug.Log("Игрок вошёл в зону NPC");
+            Debug.Log("Г€ГЈГ°Г®ГЄ ГўГ®ГёВёГ« Гў Г§Г®Г­Гі NPC");
         }
     }
 
@@ -44,7 +42,7 @@ public class NPCTrigger : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerIsNear = false;
-            Debug.Log("Игрок вышел из зоны NPC");
+            Debug.Log("Г€ГЈГ°Г®ГЄ ГўГ»ГёГҐГ« ГЁГ§ Г§Г®Г­Г» NPC");
         }
     }
 
@@ -60,10 +58,9 @@ public class NPCTrigger : MonoBehaviour
         return angle < lookAngleThreshold;
     }
 
-    // Действие при взаимодействии
     private void Interact()
     {
-        Debug.Log($"NPC: Игрок в зоне, смотрит на меня и нажал {interactionKey}!");
+        Debug.Log($"NPC: Г€ГЈГ°Г®ГЄ Гў Г§Г®Г­ГҐ, Г±Г¬Г®ГІГ°ГЁГІ Г­Г  Г¬ГҐГ­Гї ГЁ Г­Г Г¦Г Г« {interactionKey}!");
 
     }
 }
