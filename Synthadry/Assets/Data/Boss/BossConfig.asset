@@ -17,3 +17,17 @@ MonoBehaviour:
   PatternPause: {x: 1, y: 1.6}
   ChaseSpeed: 4.5
   AttackMoveSpeed: 3.5
+  RavenBurst: 12
+  RavenRate: 0.09
+  RavenSpreadAngle: 8
+  SlamSeriesCount: 4
+  SlamInterval: 0.75
+  SlashCount: 1
+  SlashWindup: 0.4
+  SlashRecovery: 0.3
+  SlashWaitMax: 3
+  ChargeCooldown: 2
+  TotemRegenPerSec: 8
+  TotemRingRadius: 8
+  TotemStunDurationOnSpawn: 1
+  TotemTriggerHealthPercent: 0.5

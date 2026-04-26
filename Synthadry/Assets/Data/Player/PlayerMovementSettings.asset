@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 950a5ccf2dd3d14489be66771da877b3, type: 3}
+  m_Name: PlayerMovementSettings
+  m_EditorClassIdentifier: 
+  SensitivityX: 2
+  SensitivityY: 2
+  MinAngleY: -75
+  MaxAngleY: 75
+  MoveSpeed: 11
+  RunSpeedMultiplier: 1.15
+  GroundAcceleration: 85
+  GroundFriction: 9
+  StopSpeed: 2
+  AirMoveSpeed: 11
+  AirAcceleration: 35
+  AirControl: 0.65
+  JumpHeight: 1.8
+  Gravity: 28
+  MaxFallSpeed: 45
+  DashKey: 113
+  DashDistance: 5
+  DashDuration: 0.14
+  DashCooldown: 0.45
+  DashStaminaCost: 30
+  AllowAirDash: 1
+  MaxStamina: 100
+  StaminaRegenerationRate: 35
+  StaminaRegenerationDelay: 1.2

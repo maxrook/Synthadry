@@ -1,210 +1,372 @@
 using UnityEngine;
+using UnityEngine.UI;
 
+[RequireComponent(typeof(CharacterController))]
 public class PlayerMovement : MonoBehaviour
 {
-    [Header("Movement Settings")]
-    public float moveSpeed = 8.0f;
-    public float runSpeedMultiplier = 1.5f;
-    public float gravity = 20.0f;
-    public float jumpHeight = 5.0f;
-    public float airControl = 0.3f;
-    public float friction = 6.0f; 
-    public float stopSpeed = 100.0f;
-    public float airMoveSpeedMultiplier = 0.8f;
-    [Header("Rotation Settings")]
-    public float sensitivityX = 2.0f;
-    public float sensitivityY = 2.0f;
-    public float minAngleY = -60.0f;
-    public float maxAngleY = 60.0f;
+    [Header("Конфиг движения игрока")]
+    public PlayerMovementConfig Config;
 
-    [Header("Falling Settings")]
-    public float maxFallSpeed = 30.0f; 
-    public float earlyFallMultiplier = 2f; 
-    public float lateFallMultiplier = 1.2f; 
-    public float fallSpeedThreshold = 5f;  
+    [Header("Камера от первого лица")]
+    public Camera FirstPersonCamera;
+
+    public Vector3 CurrentVelocity => _moveVelocity + _dashVelocity;
+    public float CurrentStamina => _currentStamina;
+    public bool IsGrounded => _isGrounded;
+    public bool IsDashing => _isDashing;
 
     private CharacterController _characterController;
-    private float _rotationY = 0.0f;
-    private Vector3 _moveDirection = Vector3.zero;
-    private bool _isGrounded = false;
-    private float _currentSpeed; 
-    private float _timeSinceLastGrounded;  
 
-    private Vector3 _lastMovementInput; 
+    private Vector3 _moveVelocity;
+    private Vector3 _dashVelocity;
 
-    private bool _isJumping = false; 
+    private float _rotationY;
+    private float _currentStamina;
 
-    public Camera firstPersonCamera;
+    private bool _isGrounded;
+    private bool _wasGrounded;
+    private bool _isDashing;
 
-    void Start()
+    private float _dashTimer;
+    private float _dashCooldownTimer;
+    private float _staminaRegenerationTimer;
+
+    private void Start()
     {
+        if (Config == null)
+        {
+            Debug.LogError("PlayerMovementConfig не назначен.");
+            enabled = false;
+            return;
+        }
+
         _characterController = GetComponent<CharacterController>();
 
-        if (_characterController == null)
+        if (FirstPersonCamera == null)
         {
-            Debug.LogError("CharacterController not found on this GameObject. Please add one.");
+            FirstPersonCamera = Camera.main;
+        }
+
+        if (FirstPersonCamera == null)
+        {
+            Debug.LogError("FirstPersonCamera не назначена.");
             enabled = false;
             return;
         }
 
-        if (firstPersonCamera == null)
-        {
-            Debug.LogError("First-person camera not assigned.  Please assign the camera.");
-            enabled = false;
-            return;
-        }
+        _currentStamina = Config.MaxStamina;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
     }
 
-    void Update()
+    private void Update()
     {
-        HandleRotation();
+        HandleLook();
+        HandleTimers();
+        HandleGroundCheck();
+        HandleDashInput();
+        HandleMovement();
+        HandleJump();
+        HandleGravity();
+        HandleDashVelocity();
 
+        Vector3 finalVelocity = _moveVelocity + _dashVelocity;
+        _characterController.Move(finalVelocity * Time.deltaTime);
+
+        SnapToGround();
+        HandleCursorUnlock();
+        RegenerateStamina();
+    }
+
+    private void HandleLook()
+    {
+        float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * Config.SensitivityX;
+
+        _rotationY += Input.GetAxis("Mouse Y") * Config.SensitivityY;
+        _rotationY = Mathf.Clamp(_rotationY, Config.MinAngleY, Config.MaxAngleY);
+
+        transform.localEulerAngles = new Vector3(0.0f, rotationX, 0.0f);
+        FirstPersonCamera.transform.localEulerAngles = new Vector3(-_rotationY, 0.0f, 0.0f);
+    }
+
+    private void HandleTimers()
+    {
+        if (_dashCooldownTimer > 0.0f)
+        {
+            _dashCooldownTimer -= Time.deltaTime;
+        }
+
+        if (_staminaRegenerationTimer > 0.0f)
+        {
+            _staminaRegenerationTimer -= Time.deltaTime;
+        }
+    }
+
+    private void HandleGroundCheck()
+    {
+        _wasGrounded = _isGrounded;
         _isGrounded = _characterController.isGrounded;
+    }
+
+    private void HandleMovement()
+    {
+        Vector3 wishDirection = GetWishDirection();
 
         if (_isGrounded)
         {
-            _timeSinceLastGrounded = 0;  
-            _isJumping = false; 
+            ApplyGroundFriction();
 
-            HandleGroundedMovement();
+            float targetSpeed = Config.MoveSpeed;
 
-            if (Input.GetButtonDown("Jump"))
+            if (Input.GetKey(KeyCode.LeftShift))
             {
-                Jump();
+                targetSpeed *= Config.RunSpeedMultiplier;
             }
+
+            Accelerate(wishDirection, targetSpeed, Config.GroundAcceleration);
         }
         else
         {
-            _timeSinceLastGrounded += Time.deltaTime; 
-
-
-            HandleAirMovement();
-
-            HandleFalling();
-        }
-
-        float gravityMultiplier = 1f;
-
-        if (_moveDirection.y < 0 && _timeSinceLastGrounded < 0.1f) 
-        {
-            gravityMultiplier = earlyFallMultiplier;
-        }
-        else if (_moveDirection.y < -fallSpeedThreshold)  
-        {
-            gravityMultiplier = lateFallMultiplier;
-        }
-
-        _moveDirection.y -= gravity * gravityMultiplier * Time.deltaTime;
-        _moveDirection.y = Mathf.Max(_moveDirection.y, -maxFallSpeed);  
-        _characterController.Move(_moveDirection * Time.deltaTime);
-
-        if (_isGrounded)
-        {
-            if (_lastMovementInput == Vector3.zero)
-            {
-                _moveDirection.x = 0;
-                _moveDirection.z = 0;
-            }
-        }
-
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            Accelerate(wishDirection, Config.AirMoveSpeed, Config.AirAcceleration);
+            ApplyAirControl(wishDirection);
         }
     }
 
-    void HandleRotation()
+    private void HandleJump()
     {
-        float rotationX = transform.localEulerAngles.y + Input.GetAxis("Mouse X") * sensitivityX;
-
-        _rotationY += Input.GetAxis("Mouse Y") * sensitivityY;
-        _rotationY = Mathf.Clamp(_rotationY, minAngleY, maxAngleY);
-
-        transform.localEulerAngles = new Vector3(0, rotationX, 0);
-        Camera.main.transform.localEulerAngles = new Vector3(-_rotationY, 0, 0);
-    }
-    void HandleGroundedMovement()
-    {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        Vector3 move = transform.forward * z + transform.right * x;
-        move.Normalize();
-
-        _lastMovementInput = move; 
-
-        _currentSpeed = moveSpeed;
-        if (Input.GetKey(KeyCode.LeftShift))
+        if (!_isGrounded)
         {
-            _currentSpeed *= runSpeedMultiplier;
+            return;
         }
 
-        _moveDirection.x = move.x * _currentSpeed;
-        _moveDirection.z = move.z * _currentSpeed;
-    }
-
-    void HandleAirMovement()
-    {
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
-
-        Vector3 forward = firstPersonCamera.transform.forward;
-        forward.y = 0;
-        forward.Normalize();
-
-        Vector3 right = firstPersonCamera.transform.right;
-        right.y = 0;
-        right.Normalize();
-
-
-        Vector3 wishDir = (forward * z) + (right * x);
-
-        if (wishDir.magnitude > 0)
+        if (!Input.GetButtonDown("Jump"))
         {
-            wishDir.Normalize(); 
+            return;
         }
 
-        float wishSpeed = moveSpeed * airControl * airMoveSpeedMultiplier;
-
-        _moveDirection.x = wishDir.x * wishSpeed;
-        _moveDirection.z = wishDir.z * wishSpeed;
+        _moveVelocity.y = Mathf.Sqrt(Config.JumpHeight * 2.0f * Config.Gravity);
+        _isGrounded = false;
     }
 
-    void HandleFalling()
+    private void HandleGravity()
     {
-        //.
-    }
-
-
-    void Jump()
-    {
-        float currentHorizontalSpeed = new Vector2(_moveDirection.x, _moveDirection.z).magnitude;
-
-        _moveDirection.y = Mathf.Sqrt(jumpHeight * 2f * gravity);
-        Vector2 horizontalVelocity = new Vector2(_moveDirection.x, _moveDirection.z).normalized * Mathf.Min(currentHorizontalSpeed, _currentSpeed);
-        _moveDirection.x = horizontalVelocity.x;
-        _moveDirection.z = horizontalVelocity.y;
-
-        _isJumping = true; 
-    }
-
-    void ApplyFriction()
-    {
-        float speed = _moveDirection.magnitude;
-        if (speed != 0)
+        if (_isGrounded && _moveVelocity.y < 0.0f)
         {
-            float drop = speed * friction * Time.deltaTime;
-            float control = Mathf.Max(drop, stopSpeed * Time.deltaTime);
-            float newSpeed = speed - control;
-            if (newSpeed < 0)
-                newSpeed = 0;
-            newSpeed /= speed;
-            _moveDirection.x *= newSpeed;
-            _moveDirection.z *= newSpeed;
+            _moveVelocity.y = -2.0f;
+            return;
         }
+
+        _moveVelocity.y -= Config.Gravity * Time.deltaTime;
+        _moveVelocity.y = Mathf.Max(_moveVelocity.y, -Config.MaxFallSpeed);
+    }
+
+    private void HandleDashInput()
+    {
+        if (!Input.GetKeyDown(Config.DashKey))
+        {
+            return;
+        }
+
+        if (_isDashing)
+        {
+            return;
+        }
+
+        if (_dashCooldownTimer > 0.0f)
+        {
+            return;
+        }
+
+        if (_currentStamina < Config.DashStaminaCost)
+        {
+            return;
+        }
+
+        if (!_isGrounded && !Config.AllowAirDash)
+        {
+            return;
+        }
+
+        StartDash();
+    }
+
+    private void StartDash()
+    {
+        Vector3 dashDirection = GetDashDirection();
+
+        _isDashing = true;
+        _dashTimer = Config.DashDuration;
+        _dashCooldownTimer = Config.DashCooldown;
+
+        _currentStamina -= Config.DashStaminaCost;
+        _currentStamina = Mathf.Clamp(_currentStamina, 0.0f, Config.MaxStamina);
+
+        _staminaRegenerationTimer = Config.StaminaRegenerationDelay;
+
+        float dashSpeed = Config.DashDistance / Config.DashDuration;
+        _dashVelocity = dashDirection * dashSpeed;
+    }
+
+    private void HandleDashVelocity()
+    {
+        if (!_isDashing)
+        {
+            _dashVelocity = Vector3.zero;
+            return;
+        }
+
+        _dashTimer -= Time.deltaTime;
+
+        if (_dashTimer <= 0.0f)
+        {
+            _isDashing = false;
+            _dashVelocity = Vector3.zero;
+        }
+    }
+
+    private Vector3 GetWishDirection()
+    {
+        float horizontalInput = Input.GetAxisRaw("Horizontal");
+        float verticalInput = Input.GetAxisRaw("Vertical");
+
+        Vector3 wishDirection = transform.right * horizontalInput + transform.forward * verticalInput;
+        wishDirection.y = 0.0f;
+
+        if (wishDirection.sqrMagnitude > 1.0f)
+        {
+            wishDirection.Normalize();
+        }
+
+        return wishDirection;
+    }
+
+    private Vector3 GetDashDirection()
+    {
+        Vector3 dashDirection = FirstPersonCamera.transform.forward;
+        dashDirection.y = 0.0f;
+
+        if (dashDirection.sqrMagnitude <= 0.001f)
+        {
+            dashDirection = transform.forward;
+        }
+
+        dashDirection.Normalize();
+        return dashDirection;
+    }
+
+    private void Accelerate(Vector3 wishDirection, float wishSpeed, float acceleration)
+    {
+        if (wishDirection.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        Vector3 horizontalVelocity = new Vector3(_moveVelocity.x, 0.0f, _moveVelocity.z);
+
+        float currentSpeed = Vector3.Dot(horizontalVelocity, wishDirection);
+        float addSpeed = wishSpeed - currentSpeed;
+
+        if (addSpeed <= 0.0f)
+        {
+            return;
+        }
+
+        float accelerationSpeed = acceleration * wishSpeed * Time.deltaTime;
+
+        if (accelerationSpeed > addSpeed)
+        {
+            accelerationSpeed = addSpeed;
+        }
+
+        _moveVelocity.x += wishDirection.x * accelerationSpeed;
+        _moveVelocity.z += wishDirection.z * accelerationSpeed;
+    }
+
+    private void ApplyGroundFriction()
+    {
+        Vector3 horizontalVelocity = new Vector3(_moveVelocity.x, 0.0f, _moveVelocity.z);
+        float speed = horizontalVelocity.magnitude;
+
+        if (speed <= 0.001f)
+        {
+            return;
+        }
+
+        float control = Mathf.Max(speed, Config.StopSpeed);
+        float drop = control * Config.GroundFriction * Time.deltaTime;
+        float newSpeed = Mathf.Max(speed - drop, 0.0f);
+
+        newSpeed /= speed;
+
+        _moveVelocity.x *= newSpeed;
+        _moveVelocity.z *= newSpeed;
+    }
+
+    private void ApplyAirControl(Vector3 wishDirection)
+    {
+        if (wishDirection.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        Vector3 horizontalVelocity = new Vector3(_moveVelocity.x, 0.0f, _moveVelocity.z);
+        float speed = horizontalVelocity.magnitude;
+
+        if (speed <= 0.001f)
+        {
+            return;
+        }
+
+        Vector3 normalizedVelocity = horizontalVelocity.normalized;
+        float dot = Vector3.Dot(normalizedVelocity, wishDirection);
+
+        if (dot <= 0.0f)
+        {
+            return;
+        }
+
+        float controlPower = Config.AirControl * dot * dot * Time.deltaTime;
+
+        Vector3 controlledVelocity = Vector3.Lerp(normalizedVelocity, wishDirection, controlPower).normalized * speed;
+
+        _moveVelocity.x = controlledVelocity.x;
+        _moveVelocity.z = controlledVelocity.z;
+    }
+
+    private void SnapToGround()
+    {
+        if (_characterController.isGrounded && !_wasGrounded && _moveVelocity.y < 0.0f)
+        {
+            _moveVelocity.y = -2.0f;
+        }
+    }
+
+    private void RegenerateStamina()
+    {
+        if (_staminaRegenerationTimer > 0.0f)
+        {
+            return;
+        }
+
+        if (_currentStamina >= Config.MaxStamina)
+        {
+            return;
+        }
+
+        _currentStamina += Config.StaminaRegenerationRate * Time.deltaTime;
+        _currentStamina = Mathf.Clamp(_currentStamina, 0.0f, Config.MaxStamina);
+    }
+
+    private void HandleCursorUnlock()
+    {
+        if (!Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 }
