@@ -71,7 +71,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
     private void OnPauseReady()
     {
         PauseManager.Instance.Register(this);
-        PauseManager.OnPauseManagerReady -= OnPauseReady; // Отписываемся
+        PauseManager.OnPauseManagerReady -= OnPauseReady; // ????????????
     }
 
     void OnDestroy()
@@ -82,6 +82,12 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
 
     void Update()
     {
+        // ???????? ?????? ??? ???????
+        if (transform.position.y < -10f && DeathManager.Instance != null)
+        {
+            DeathManager.Instance.PlayerDied();
+            return; // ?????????? ?????????? ??????????
+        }
         if (Input.GetButtonDown("Pause"))
         {
             Pause();
@@ -226,7 +232,7 @@ public class PlayerMovement : MonoBehaviour, IPauseHandler
 
     public void SetPaused(bool isPaused)
     {
-        enabled = !isPaused; // Остановка Update, если пауза = true, то enabled должен быть равен = false
+        enabled = !isPaused; // ????????? Update, ???? ????? = true, ?? enabled ?????? ???? ????? = false
     }
 
     void ApplyFriction()
